@@ -67,8 +67,9 @@ function nucleus(group, x,y,z, color=0x7e57c2){
   mem.position.set(x,y,z); group.add(mem);
 }
 function mitochondria(group,x,y,z){
-  const mit = new THREE.Mesh(new THREE.CapsuleGeometry? new THREE.CapsuleGeometry(.22,.4,8,16):new THREE.SphereGeometry(.3,20,20),
+  const mit = new THREE.Mesh(new THREE.SphereGeometry(.3,20,20),
       new THREE.MeshStandardMaterial({color:0xef5350,roughness:.5}));
+  mit.scale.set(1.5,.8,.8);
   mit.position.set(x,y,z); mit.rotation.z=Math.random()*Math.PI; group.add(mit);
 }
 

@@ -269,7 +269,8 @@ var wallGroup=null;
 function show(k){
   for(var key in groups) groups[key].visible=(key===k);
   if(wallGroup) scene.remove(wallGroup);
-  wallGroup=makeWallDetail(k);
+    wallGroup=makeWallDetail(k);
+  scene.add(wallGroup);
   info.innerHTML=texts[k]+"<br><small>Вращай мышкой (или пальцем), колесо — приближение</small>";
   var btns=document.querySelectorAll('#tabs button');
   for(var i=0;i<btns.length;i++) btns[i].classList.toggle('active',btns[i].getAttribute('data-k')===k);

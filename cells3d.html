@@ -29,154 +29,156 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const scene = new THREE.Scene();
+var scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b1020);
-const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
+var camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
 camera.position.set(0, 3, 9);
-const renderer = new THREE.WebGLRenderer({antialias:true});
+var renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 scene.add(new THREE.AmbientLight(0xffffff, .5));
-const dl = new THREE.DirectionalLight(0xffffff, .9); dl.position.set(5,8,5); scene.add(dl);
-const dl2 = new THREE.DirectionalLight(0x88aaff, .4); dl2.position.set(-5,-3,-5); scene.add(dl2);
+var dl = new THREE.DirectionalLight(0xffffff, .9); dl.position.set(5,8,5); scene.add(dl);
+var dl2 = new THREE.DirectionalLight(0x88aaff, .4); dl2.position.set(-5,-3,-5); scene.add(dl2);
 
-// --- вспомогательные детали ---
-function dot(x,y,z,color,s=0.12){ // рибосомы и мелкие частицы
-  const m = new THREE.Mesh(new THREE.SphereGeometry(s,10,10),
-      new THREE.MeshStandardMaterial({color:color,roughness:.6}));
+function matStd(color, opts){
+  if(!opts) opts = {};
+  opts.color = new THREE.Color(color);
+  return new THREE.MeshStandardMaterial(opts);
+}
+function dot(x,y,z,color,s){
+  if(!s) s = 0.12;
+  var m = new THREE.Mesh(new THREE.SphereGeometry(s,10,10), matStd(color,{roughness:.6}));
   m.position.set(x,y,z); return m;
 }
 function randomDots(group,n,color,s){
-  for(let i=0;i<n;i++){
-    const a=Math.random()*Math.PI*2, b=Math.random()*Math.PI, r=Math.random()*1.2;
+  for(var i=0;i<n;i++){
+    var a=Math.random()*Math.PI*2, b=Math.random()*Math.PI, r=Math.random()*1.2;
     group.add(dot(r*Math.sin(b)*Math.cos(a), (Math.random()-.5)*1.4, r*Math.sin(b)*Math.sin(a), color, s));
   }
 }
-function nucleus(group, x,y,z, color=0x7e57c2){
-  const nuc = new THREE.Mesh(new THREE.SphereGeometry(.75,32,32),
-      new THREE.MeshStandardMaterial({color:color,transparent:true,opacity:.85,roughness:.4}));
+function nucleus(group,x,y,z,color){
+  if(!color) color=0x7e57c2;
+  var nuc = new THREE.Mesh(new THREE.SphereGeometry(.75,32,32),
+      matStd(color,{transparent:true,opacity:.85,roughness:.4}));
   nuc.position.set(x,y,z); group.add(nuc);
-  const nuc2 = new THREE.Mesh(new THREE.SphereGeometry(.3,24,24),
-      new THREE.MeshStandardMaterial({color:0x5e35b1}));
-  nuc2.position.set(x,y,z); nuc2.position.y+=.15; group.add(nuc2); // ядрышко
-  const mem = new THREE.Mesh(new THREE.SphereGeometry(.85,32,32),
-      new THREE.MeshStandardMaterial({color:0xffffff,transparent:true,opacity:.12,wireframe:false}));
+  var nuc2 = new THREE.Mesh(new THREE.SphereGeometry(.3,24,24), matStd(0x5e35b1));
+  nuc2.position.set(x,y+.15,z); group.add(nuc2);
+  var mem = new THREE.Mesh(new THREE.SphereGeometry(.85,32,32),
+      matStd(0xffffff,{transparent:true,opacity:.12}));
   mem.position.set(x,y,z); group.add(mem);
 }
 function mitochondria(group,x,y,z){
-  const mit = new THREE.Mesh(new THREE.SphereGeometry(.3,20,20),
-      new THREE.MeshStandardMaterial({color:0xef5350,roughness:.5}));
+  var mit = new THREE.Mesh(new THREE.SphereGeometry(.3,20,20), matStd(0xef5350,{roughness:.5}));
   mit.scale.set(1.5,.8,.8);
-  mit.position.set(x,y,z); mit.rotation.z=Math.random()*Math.PI; group.add(mit);
+  mit.position.set(x,y,z);
+  mit.rotation.z=Math.random()*Math.PI;
+  group.add(mit);
 }
 
-// --- ЦАРСТВО 1: РАСТЕНИЯ ---
+/* РАСТЕНИЯ */
 function buildPlant(){
-  const g = new THREE.Group();
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(4.2,4.2,4.2,3,3,3),
-      new THREE.MeshStandardMaterial({color:0x66bb6a,transparent:true,opacity:.15}));
-  wall.rotation.y=Math.PI/4; g.add(wall); // целлюлозная стенка
-  const mem = new THREE.Mesh(new THREE.SphereGeometry(2.2,32,32),
-      new THREE.MeshStandardMaterial({color:0x43a047,transparent:true,opacity:.25}));
-  g.add(mem); // мембрана
-  // крупная вакуоль
-  const vac = new THREE.Mesh(new THREE.SphereGeometry(1.15,32,32),
-      new THREE.MeshStandardMaterial({color:0x4fc3f7,transparent:true,opacity:.35}));
+  var g = new THREE.Group();
+  var wall = new THREE.Mesh(new THREE.BoxGeometry(4.2,4.2,4.2,3,3,3),
+      matStd(0x66bb6a,{transparent:true,opacity:.15}));
+  wall.rotation.y=Math.PI/4; g.add(wall);
+  var mem = new THREE.Mesh(new THREE.SphereGeometry(2.2,32,32),
+      matStd(0x43a047,{transparent:true,opacity:.25}));
+  g.add(mem);
+  var vac = new THREE.Mesh(new THREE.SphereGeometry(1.15,32,32),
+      matStd(0x4fc3f7,{transparent:true,opacity:.35}));
   vac.position.set(0,-.6,0); g.add(vac);
-  // хлоропласты
-  [[1.3,.8,.6],[-1.4,.6,.5],[.6,1.2,-.8],[-.8,-1.2,.9],[1.5,-.9,-.4]].forEach(p=>{
-    const ch = new THREE.Mesh(new THREE.SphereGeometry(.34,20,20),
-        new THREE.MeshStandardMaterial({color:0x2e7d32,roughness:.5}));
-    ch.scale.set(1.5,.8,.8); ch.position.set(p[0],p[1],p[2]);
+  var spots=[[1.3,.8,.6],[-1.4,.6,.5],[.6,1.2,-.8],[-.8,-1.2,.9],[1.5,-.9,-.4]];
+  for(var i=0;i<spots.length;i++){
+    var ch = new THREE.Mesh(new THREE.SphereGeometry(.34,20,20), matStd(0x2e7d32,{roughness:.5}));
+    ch.scale.set(1.5,.8,.8); ch.position.set(spots[i][0],spots[i][1],spots[i][2]);
     ch.rotation.set(Math.random(),Math.random(),Math.random()); g.add(ch);
-  });
+  }
   nucleus(g,0,1.1,0);
   mitochondria(g,1.2,.2,.9); mitochondria(g,-1.2,-.3,-.8);
-  randomDots(g,25,0xffca28,.07); // рибосомы
+  randomDots(g,25,0xffca28,.07);
   return g;
 }
-// --- ЦАРСТВО 2: ЖИВОТНЫЕ ---
+/* ЖИВОТНЫЕ */
 function buildAnimal(){
-  const g = new THREE.Group();
-  const mem = new THREE.Mesh(new THREE.SphereGeometry(2.1,48,48),
-      new THREE.MeshStandardMaterial({color:0x42a5f5,transparent:true,opacity:.3}));
-  g.add(mem); // только мембрана, стенки нет
+  var g = new THREE.Group();
+  var mem = new THREE.Mesh(new THREE.SphereGeometry(2.1,48,48),
+      matStd(0x42a5f5,{transparent:true,opacity:.3}));
+  g.add(mem);
   nucleus(g,0,.6,0,0x5c6bc0);
   mitochondria(g,1.2,-.6,.5); mitochondria(g,-1.3,-.4,-.5); mitochondria(g,.2,-1.2,1);
-  // лизосомы
-  [[1.5,.9,-.4],[-1.6,.8,.3],[.5,1.4,.6]].forEach(p=>g.add(dot(p[0],p[1],p[2],0xff7043,.18)));
+  var ly=[[1.5,.9,-.4],[-1.6,.8,.3],[.5,1.4,.6]];
+  for(var i=0;i<ly.length;i++) g.add(dot(ly[i][0],ly[i][1],ly[i][2],0xff7043,.18));
   randomDots(g,30,0xffca28,.07);
   return g;
 }
-// --- ЦАРСТВО 3: ГРИБЫ ---
+/* ГРИБЫ */
 function buildFungi(){
-  const g = new THREE.Group();
-  const wall = new THREE.Mesh(new THREE.SphereGeometry(2.2,32,32),
-      new THREE.MeshStandardMaterial({color:0xa1887f,transparent:true,opacity:.18}));
-  wall.scale.set(1,.9,1); g.add(wall); // хитиновая стенка
-  const mem = new THREE.Mesh(new THREE.SphereGeometry(2.05,32,32),
-      new THREE.MeshStandardMaterial({color:0x8d6e63,transparent:true,opacity:.3}));
+  var g = new THREE.Group();
+  var wall = new THREE.Mesh(new THREE.SphereGeometry(2.2,32,32),
+      matStd(0xa1887f,{transparent:true,opacity:.18}));
+  wall.scale.set(1,.9,1); g.add(wall);
+  var mem = new THREE.Mesh(new THREE.SphereGeometry(2.05,32,32),
+      matStd(0x8d6e63,{transparent:true,opacity:.3}));
   mem.scale.set(1,.9,1); g.add(mem);
-  nucleus(g,0,.8,0,0x7e57c2);
-  const vac = new THREE.Mesh(new THREE.SphereGeometry(.8,24,24),
-      new THREE.MeshStandardMaterial({color:0x4fc3f7,transparent:true,opacity:.35}));
-  vac.position.set(0,-.8,.3); g.add(vac); // вакуоль
+  nucleus(g,0,.8,0);
+  var vac = new THREE.Mesh(new THREE.SphereGeometry(.8,24,24),
+      matStd(0x4fc3f7,{transparent:true,opacity:.35}));
+  vac.position.set(0,-.8,.3); g.add(vac);
   mitochondria(g,1.2,-.2,-.6); mitochondria(g,-1.2,.2,.6);
   randomDots(g,22,0xffca28,.07);
   return g;
 }
-// --- ЦАРСТВО 4: БАКТЕРИИ ---
+/* БАКТЕРИИ */
 function buildBact(){
-  const g = new THREE.Group();
-  // палочковидная клетка (коккобацилла)
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,3.2,32),
-      new THREE.MeshStandardMaterial({color:0x26a69a,transparent:true,opacity:.35}));
+  var g = new THREE.Group();
+  var bodyMat = matStd(0x26a69a,{transparent:true,opacity:.35});
+  var body = new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,3.2,32), bodyMat);
   g.add(body);
-  const cap1 = new THREE.Mesh(new THREE.SphereGeometry(.9,32,32),
-      new THREE.MeshStandardMaterial({color:0x26a69a,transparent:true,opacity:.35}));
+  var cap1 = new THREE.Mesh(new THREE.SphereGeometry(.9,32,32), bodyMat);
   cap1.position.y=1.6; g.add(cap1);
-  const cap2 = cap1.clone(); cap2.position.y=-1.6; g.add(cap2);
-  // кольцевая ДНК (нуклеоид) — тор
-  const dna = new THREE.Mesh(new THREE.TorusGeometry(.55,.09,12,40),
-      new THREE.MeshStandardMaterial({color:0xffee58,roughness:.4}));
+  var cap2 = new THREE.Mesh(new THREE.SphereGeometry(.9,32,32), bodyMat);
+  cap2.position.y=-1.6; g.add(cap2);
+  var dna = new THREE.Mesh(new THREE.TorusGeometry(.55,.09,12,40), matStd(0xffee58,{roughness:.4}));
   dna.rotation.x=Math.PI/2; dna.position.y=.2; g.add(dna);
-  // плазмиды
-  const pl = new THREE.Mesh(new THREE.TorusGeometry(.2,.05,10,24),
-      new THREE.MeshStandardMaterial({color:0xff7043}));
+  var pl = new THREE.Mesh(new THREE.TorusGeometry(.2,.05,10,24), matStd(0xff7043));
   pl.rotation.x=Math.PI/2.5; pl.position.set(.9,-.7,.4); g.add(pl);
-  randomDots(g,35,0xffca28,.08); // рибосомы
-  // жгутик
-  const flag = new THREE.Mesh(new THREE.TorusGeometry(1.2,.04,8,50,Math.PI*1.4),
-      new THREE.MeshStandardMaterial({color:0xeeff41}));
+  randomDots(g,35,0xffca28,.08);
+  var flag = new THREE.Mesh(new THREE.TorusGeometry(1.2,.04,8,50,Math.PI*1.4), matStd(0xeeff41));
   flag.position.set(0,-2.6,0); flag.rotation.x=Math.PI/2.2; g.add(flag);
   return g;
 }
 
-const texts = {
+var texts = {
   plant:"<b>Клетка растения:</b> целлюлозная стенка (зелёный каркас), хлоропласты (тёмно-зелёные), крупная центральная вакуоль (голубая), ядро (фиолетовое), митохондрии (красные), рибосомы (жёлтые).",
   animal:"<b>Клетка животного:</b> только мембрана (без стенки), ядро, много митохондрий, лизосомы (оранжевые), рибосомы.",
   fungi:"<b>Клетка гриба:</b> хитиновая стенка (коричневатая), ядро, вакуоль, митохондрии, рибосомы.",
   bact:"<b>Бактерия (прокариот):</b> нет ядра! Кольцевая ДНК (жёлтая) лежит прямо в цитоплазме, есть плазмида (оранжевая) и жгутик (салатовый)."
 };
 
-const groups = {plant:buildPlant(), animal:buildAnimal(), fungi:buildFungi(), bact:buildBact()};
-for(const k in groups){ groups[k].visible=false; scene.add(groups[k]); }
+var groups = {plant:buildPlant(), animal:buildAnimal(), fungi:buildFungi(), bact:buildBact()};
+for(var k in groups){ groups[k].visible=false; scene.add(groups[k]); }
 groups.plant.visible=true;
-const info=document.getElementById('info');
+var info=document.getElementById('info');
 function show(k){
-  for(const key in groups) groups[key].visible=(key===k);
-  info.innerHTML=texts[k]+
-    '<br><small>Вращай мышкой (или пальцем), колесо — приближение</small>';
-  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('active',b.dataset.k===k));
+  for(var key in groups) groups[key].visible=(key===k);
+  info.innerHTML=texts[k]+"<br><small>Вращай мышкой (или пальцем), колесо — приближение</small>";
+  var btns=document.querySelectorAll('#tabs button');
+  for(var i=0;i<btns.length;i++) btns[i].classList.toggle('active',btns[i].getAttribute('data-k')===k);
 }
-document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>show(b.dataset.k));
+var tabBtns=document.querySelectorAll('#tabs button');
+for(var i=0;i<tabBtns.length;i++){
+  (function(btn){ btn.onclick=function(){ show(btn.getAttribute('data-k')); }; })(tabBtns[i]);
+}
 show('plant');
 
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
-(function loop(){requestAnimationFrame(loop);controls.update();renderer.render(scene,camera);})();
+addEventListener('resize',function(){
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+(function loop(){ requestAnimationFrame(loop); controls.update(); renderer.render(scene,camera); })();
 </script>
 </body>
 </html>

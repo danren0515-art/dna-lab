@@ -12,6 +12,7 @@
   .panel{position:fixed;background:rgba(15,20,40,.9);border:1px solid rgba(120,150,255,.25);
     border-radius:12px;padding:14px;backdrop-filter:blur(6px);font-size:14px}
   #tabs{top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;
+    flex-wrap:wrap;justify-content:center;max-width:96vw;
     padding:8px 12px;z-index:10}
   #tabs .tab{background:#1c3f8f}
   #tabs .tab.active{background:#2a5bd0;box-shadow:0 0 10px rgba(90,140,255,.6)}
@@ -817,3 +818,5 @@ if ('serviceWorker' in navigator)
 
 </body>
 </html>
+
+

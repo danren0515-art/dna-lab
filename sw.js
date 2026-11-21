@@ -1,5 +1,8 @@
 const CACHE = 'dna-v1';
-const ASSETS = ['index.html', 'manifest.json', 'icon.png'];
+const ASSETS = ['index.html', 'manifest.json', 'icon.png''cells3d.html',
+'chloroplast3d.html',
+'nucleus3d.html',
+'mitochondria3d.html'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
   self.skipWaiting();

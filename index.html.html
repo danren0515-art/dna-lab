@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ДНК, митоз, мейоз и тРНК — 3D</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;background:#0b1020;color:#e8ecf5}
+  #scene{position:fixed;inset:0}
+  .panel{position:fixed;background:rgba(15,20,40,.9);border:1px solid rgba(120,150,255,.25);
+    border-radius:12px;padding:14px;backdrop-filter:blur(6px);font-size:14px}
+  #tabs{top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;
+    padding:8px 12px;z-index:10}
+  #tabs .tab{background:#1c3f8f}
+  #tabs .tab.active{background:#2a5bd0;box-shadow:0 0 10px rgba(90,140,255,.6)}
+  #left{top:70px;left:14px;width:280px;max-height:calc(100vh - 90px);overflow:auto;z-index:5}
+  #right{top:12px;right:14px;width:330px;max-height:92vh;overflow:auto;z-index:5}
+  h1{font-size:17px;margin:0 0 10px}
+  label{display:block;margin:8px 0 4px;font-size:12px;opacity:.8}
+  input#seq{width:100%;box-sizing:border-box;background:#0d1730;color:#fff;border:1px solid #334;
+    border-radius:8px;padding:8px;font-family:monospace;font-size:14px;letter-spacing:1px}
+  .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  button{background:#1c3f8f;color:#fff;border:0;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px}
+  button:hover:not(:disabled){background:#2a5bd0}
+  button:disabled{opacity:.35;cursor:default}
+  .info{margin-top:10px;min-height:56px;line-height:1.4;background:rgba(0,0,0,.3);
+    border-radius:8px;padding:8px;font-size:13px}
+  #err{color:#ff8787;font-size:12px;min-height:15px;margin-top:4px}
+  .leg{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:12px}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+  table{border-collapse:collapse;width:100%;font-size:11px}
+  th,td{border:1px solid rgba(120,150,255,.25);padding:3px 5px;text-align:center}
+  th{background:rgba(60,90,180,.35)}
+  .cd{white-space:nowrap;text-align:left}
+  summary{cursor:pointer;font-weight:600}
+  .hidden{display:none}
+  ul{margin:6px 0;padding-left:18px}
+  li{margin:4px 0}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div class="panel" id="tabs">
+  <button class="tab active" data-tab="dna">ДНК → белок</button>
+  <button class="tab" data-tab="mito">Митоз и мейоз</button>
+  <button class="tab" data-tab="trna">тРНК и трансляция</button>
+  <span style="font-size:12px;opacity:.7;margin-left:6px">Скорость:</span>
+  <input type="range" id="speed" min="0.3" max="3" step="0.1" value="1" style="width:90px">
+</div>
+
+<div class="panel" id="left">
+  <div id="panelDna">
+    <h1>ДНК → мРНК → белок</h1>
+    <label>Последовательность ДНК (5′→3′)</label>
+    <input id="seq" value="ATGGCCTATCGTAAAGGCTAA" spellcheck="false">
+    <div id="err"></div>
+    <div class="btns">
+      <button id="btnBuild">1. Построить ДНК</button>
+      <button id="btnTranscribe" disabled>2. Транскрипция</button>
+      <button id="btnTranslate" disabled>3. Трансляция</button>
+      <button id="btnResetDna">Сброс</button>
+    </div>
+    <div class="info" id="infoDna">Введите последовательность и нажмите «Построить ДНК». Мышью вращайте сцену, колесом приближайте.</div>
+    <div class="leg">
+      <span><span class="sw" style="background:#ff5c5c"></span>A</span>
+      <span><span class="sw" style="background:#5c8bff"></span>T</span>
+      <span><span class="sw" style="background:#5cf29b"></span>G</span>
+      <span><span class="sw" style="background:#ffd43b"></span>C</span>
+      <span><span class="sw" style="background:#ff9f43"></span>U (мРНК)</span>
+    </div>
+  </div>
+
+  <div id="panelMito" class="hidden">
+    <h1>Митоз и мейоз</h1>
+    <div class="btns">
+      <button id="btnMito">Митоз</button>
+      <button id="btnMeio">Мейоз</button>
+      <button id="btnResetMito">Сброс</button>
+    </div>
+    <div class="info" id="infoMito">Клетка 2n = 4 (две пары гомологичных хромосом). Нажмите «Митоз» или «Мейоз» — этапы подписываются здесь.</div>
+  </div>
+
+  <div id="panelTrna" class="hidden">
+    <h1>тРНК и трансляция</h1>
+    <div class="btns">
+      <button id="btnTrnaShow">Строение тРНК</button>
+      <button id="btnTrnaTrans">Трансляция (демо)</button>
+      <button id="btnResetTrna">Сброс</button>
+    </div>
+    <div class="info" id="infoTrna">«Строение тРНК» — вращающаяся 3D-модель с подписями. «Трансляция (демо)» берёт последовательность из первой вкладки: рибосома с участками A, P, E, тРНК приносят аминокислоты.</div>
+  </div>
+</div>
+
+<div class="panel" id="right">
+  <div id="rightDna">
+    <details open>
+      <summary>Таблица генетического кода</summary>
+      <div id="codonTable"></div>
+    </details>
+  </div>
+  <div id="rightMito" class="hidden">
+    <details open>
+      <summary>Митоз vs Мейоз</summary>
+      <table>
+        <tr><th></th><th>Митоз</th><th>Мейоз</th></tr>
+        <tr><td>Делений</td><td>1</td><td>2</td></tr>
+        <tr><td>Кроссинговер</td><td>нет</td><td>есть</td></tr>
+        <tr><td>Результат</td><td>2 клетки 2n</td><td>4 клетки n</td></tr>
+        <tr><td>Роль</td><td>рост тканей</td><td>гаметы</td></tr>
+      </table>
+    </details>
+  </div>
+  <div id="rightTrna" class="hidden">
+    <details open>
+      <summary>Строение тРНК</summary>
+      <ul>
+        <li><b>Акцепторный стебель</b> — на 3′-конце (САА) крепится аминокислота.</li>
+        <li><b>D-петля</b> — узнаётся ферментом, заряжающим тРНК.</li>
+        <li><b>Антикодоновая петля</b> — антикодон комплементарен кодону мРНК.</li>
+        <li><b>T-петля</b> — контакт с рибосомой.</li>
+      </ul>
+      <details open>
+        <summary>Стадии трансляции</summary>
+        <ul>
+          <li><b>Инициация</b> — малая субединица находит AUG; тРНК-Мет занимает P-участок.</li>
+          <li><b>Элонгация</b> — тРНК входит в A, пептид переносится на неё, транслокация A→P, P→E, E — наружу.</li>
+          <li><b>Терминация</b> — стоп-кодон освобождает полипептид.</li>
+        </ul>
+      </details>
+    </details>
+  </div>
+</div>
+
+<script>
+window.addEventListener('error',function(e){
+  var d=document.createElement('div');
+  d.style.cssText='position:fixed;bottom:8px;left:8px;max-width:70vw;background:#5c1a1a;color:#ffd7d7;padding:8px 12px;border-radius:8px;font:12px monospace;z-index:99';
+  d.textContent='Ошибка: '+e.message;
+  document.body.appendChild(d);
+});
+</script>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const CODONS = {
+  TTT:'Phe',TTC:'Phe',TTA:'Leu',TTG:'Leu',CTT:'Leu',CTC:'Leu',CTA:'Leu',CTG:'Leu',
+  ATT:'Ile',ATC:'Ile',ATA:'Ile',ATG:'Met',GTT:'Val',GTC:'Val',GTA:'Val',GTG:'Val',
+  TCT:'Ser',TCC:'Ser',TCA:'Ser',TCG:'Ser',CCT:'Pro',CCC:'Pro',CCA:'Pro',CCG:'Pro',
+  ACT:'Thr',ACC:'Thr',ACA:'Thr',ACG:'Thr',GCT:'Ala',GCC:'Ala',GCA:'Ala',GCG:'Ala',
+  TAT:'Tyr',TAC:'Tyr',TAA:'Stop',TAG:'Stop',CAT:'His',CAC:'His',CAA:'Gln',CAG:'Gln',
+  AAT:'Asn',AAC:'Asn',AAA:'Lys',AAG:'Lys',GAT:'Asp',GAC:'Asp',GAA:'Glu',GAG:'Glu',
+  TGT:'Cys',TGC:'Cys',TGA:'Stop',TGG:'Trp',CGT:'Arg',CGC:'Arg',CGA:'Arg',CGG:'Arg',
+  AGT:'Ser',AGC:'Ser',AGA:'Arg',AGG:'Arg',GGT:'Gly',GGC:'Gly',GGA:'Gly',GGG:'Gly'
+};
+const AA_INFO = {
+  Phe:['Фен','#ff6b6b'],Leu:['Лей','#ffa94d'],Ile:['Иле','#ffd43b'],Met:['Мет','#a9e34b'],
+  Val:['Вал','#69db7c'],Ser:['Сер','#38d9a9'],Pro:['Про','#66d9e8'],Thr:['Тре','#4dabf7'],
+  Ala:['Ала','#748ffc'],Tyr:['Тир','#9775fa'],His:['Гис','#da77f2'],Gln:['Глн','#f783ac'],
+  Asn:['Асн','#ff8787'],Lys:['Лиз','#ffc078'],Asp:['Асп','#ffe066'],Glu:['Глу','#8ce99a'],
+  Cys:['Цис','#b2f2bb'],Trp:['Трип','#e599f7'],Arg:['Арг','#a5d8ff'],Gly:['Гли','#dee2e6'],
+  Stop:['Стоп','#868e96']
+};
+const COLORS = {A:'#ff5c5c',T:'#5c8bff',G:'#5cf29b',C:'#ffd43b',U:'#ff9f43'};
+const COMP   = {A:'T',T:'A',G:'C',C:'G'};
+const COMP_R = {A:'U',U:'A',G:'C',C:'G'};
+
+let scene,camera,renderer,controls;
+let activeTab='dna',runToken=0,busy=false,speed=1,phase='idle',sceneVer=0;
+let seqStr='ATGGCCTATCGTAAAGGCTAA';
+let dnaGroup=null,mrnaGroup=null,ribGroup=null,chainGroup=null,poly=null;
+let seq=[],nodes=[],mrnaMeshes=[],mrnaLineX=[],chain=[],helixConns=[];
+let trnaModel=null;
+
+const tweens=[],fibers=[],sceneLights=[];
+
+function tween(dur,fn){dur=Math.max(dur,1);
+  return new Promise(res=>tweens.push({t:0,dur,fn,res,ver:sceneVer}));}
+const wait=ms=>tween(ms,()=>{});
+
+function mat(color,opts={}){return new THREE.MeshStandardMaterial(
+  Object.assign({color:new THREE.Color(color),roughness:0.45,metalness:0.1},opts));}
+function addSphere(parent,pos,r,color){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,20),mat(color));
+  m.position.copy(pos);parent.add(m);return m;}
+function addCyl(parent,a,b,r,color){
+  const dir=new THREE.Vector3().subVectors(b,a),len=dir.length();
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,8),mat(color));
+  m.position.copy(a).addScaledVector(dir,0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
+  parent.add(m);return m;}
+
+/* ПОЛНАЯ очистка: со сцены удаляется всё, кроме источников света.
+   Зависшие анимации разрешаются, чтобы асинхронные функции спокойно
+   дошли до проверки токена и завершились. */
+function clearAll(){
+  sceneVer++;
+  tweens.slice().forEach(t=>t.res());tweens.length=0;
+  [...scene.children].forEach(o=>{if(!sceneLights.includes(o))scene.remove(o);});
+  fibers.length=0;
+  dnaGroup=mrnaGroup=ribGroup=chainGroup=poly=trnaModel=null;
+  nodes=[];mrnaMeshes=[];chain=[];mrnaLineX=[];helixConns=[];
+}
+
+function makeFiber(getA,getB){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,1,6),
+    mat('#8899ff',{transparent:true,opacity:0.55}));
+  m.userData.getA=getA;m.userData.getB=getB;
+  scene.add(m);fibers.push(m);return m;}
+function updateFibers(){
+  fibers.forEach(m=>{
+    const a=m.userData.getA(),b=m.userData.getB();
+    const dir=new THREE.Vector3().subVectors(b,a);
+    m.scale.set(1,Math.max(dir.length(),0.001),1);
+    m.position.copy(a).addScaledVector(dir,0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
+  });}
+
+function makeLabel(text,scale=1){
+  const cv=document.createElement('canvas');cv.width=512;cv.height=128;
+  const c=cv.getContext('2d');
+  c.font='bold 40px Segoe UI, Arial';
+  const w=Math.min(c.measureText(text).width+40,500);
+  c.fillStyle='rgba(8,12,28,0.8)';c.fillRect((512-w)/2,18,w,92);
+  c.strokeStyle='rgba(140,170,255,0.7)';c.strokeRect((512-w)/2,18,w,92);
+  c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+  c.fillText(text,256,64);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
+  sp.scale.set(2.9*scale,0.72*scale,1);return sp;}
+
+function moveCam(pos,target,dur){
+  const p0=camera.position.clone(),t0=controls.target.clone();
+  return tween(dur,p=>{camera.position.lerpVectors(p0,pos,p);
+    controls.target.lerpVectors(t0,target,p);});}
+
+function init(){
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1020);
+  camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,300);
+  camera.position.set(7,4,17);
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(devicePixelRatio);
+  renderer.setSize(innerWidth,innerHeight);
+  document.getElementById('scene').appendChild(renderer.domElement);
+  controls=new OrbitControls(camera,renderer.domElement);
+  const amb=new THREE.AmbientLight(0xffffff,0.7);scene.add(amb);sceneLights.push(amb);
+  const d=new THREE.DirectionalLight(0xffffff,1.1);d.position.set(5,8,10);
+  scene.add(d);sceneLights.push(d);
+  const d2=new THREE.DirectionalLight(0x8899ff,0.5);d2.position.set(-6,-4,-8);
+  scene.add(d2);sceneLights.push(d2);
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  const clock=new THREE.Clock();
+  (function loop(){
+    requestAnimationFrame(loop);
+    const dt=clock.getDelta();
+    for(let i=tweens.length-1;i>=0;i--){
+      const t=tweens[i];
+      if(t.ver!==sceneVer){tweens.splice(i,1);t.res();continue;}
+      t.t+=dt*1000*speed;
+      const p=Math.min(t.t/t.dur,1);t.fn(p);
+      if(p>=1){tweens.splice(i,1);t.res();}
+    }
+    if(fibers.length)updateFibers();
+    if(activeTab==='trna'&&trnaModel)trnaModel.rotation.y+=dt*0.4;
+    controls.update();renderer.render(scene,camera);
+  })();
+}
+
+function buildDNA(str){
+  if(Array.isArray(str))str=str.join('');
+  seqStr=str;
+  clearAll();
+  seq=str.split('');
+  const n=seq.length,R=2.0,BR=1.25,STEP=0.6,ANG=0.55;
+  dnaGroup=new THREE.Group();scene.add(dnaGroup);
+  const grey=0x9fb3c8;let prevA=null,prevB=null;
+  for(let i=0;i<n;i++){
+    const a=i*ANG,y=i*STEP-n*STEP/2;
+    const ca=Math.cos(a),sa=Math.sin(a);
+    const pA=new THREE.Vector3(ca*R,y,sa*R),pB=new THREE.Vector3(-ca*R,y,-sa*R);
+    const bA=new THREE.Vector3(ca*BR,y,sa*BR),bB=new THREE.Vector3(-ca*BR,y,-sa*BR);
+    addSphere(dnaGroup,pA,0.16,grey);addSphere(dnaGroup,pB,0.16,grey);
+    addSphere(dnaGroup,bA,0.3,COLORS[seq[i]]);
+    addSphere(dnaGroup,bB,0.3,COLORS[COMP[seq[i]]]);
+    addCyl(dnaGroup,bA,bB,0.06,0x7799bb);
+    if(prevA){addCyl(dnaGroup,prevA,pA,0.1,grey);addCyl(dnaGroup,prevB,pB,0.1,grey);}
+    prevA=pA;prevB=pB;
+    nodes.push({y,mA:new THREE.Vector3(-ca*3.2,y,-sa*3.2),letter:seq[i]==='T'?'U':seq[i]});
+  }
+  poly=new THREE.Mesh(new THREE.TorusGeometry(2.7,0.35,12,48),
+    mat('#ff922b',{transparent:true,opacity:0.85}));
+  poly.rotation.x=Math.PI/2;poly.position.y=nodes[0].y;
+  scene.add(poly);
+  phase='built';
+  setInfoDna(`ДНК построена: <b>${n}</b> пар нуклеотидов. Запускайте <b>транскрипцию</b>.`);
+}
+
+async function transcribe(my){
+  phase='transcribing';
+  mrnaGroup=new THREE.Group();scene.add(mrnaGroup);
+  const n=seq.length;let prev=null;
+  for(let i=0;i<n;i++){
+    const y0=poly.position.y,y1=nodes[i].y;
+    await tween(140/speed,p=>poly.position.y=y0+(y1-y0)*p);
+    if(my!==runToken)return;
+    const m=addSphere(mrnaGroup,nodes[i].mA,0.26,COLORS[nodes[i].letter]);
+    m.scale.setScalar(0.01);mrnaMeshes.push(m);
+    tween(220/speed,p=>m.scale.setScalar(Math.max(0.01,p)));
+    if(prev)helixConns.push(addCyl(mrnaGroup,prev,m.position.clone(),0.07,'#74c0fc'));
+    prev=m.position.clone();
+    if(i%5===0)setInfoDna(`Транскрипция: нуклеотид ${i+1} из ${n}`);
+  }
+  if(my!==runToken)return;
+  await wait(400);if(my!==runToken)return;
+  setInfoDna('мРНК готова — «отпочковывается» от ДНК и выстраивается в линию');
+  /* ГЛАВНОЕ ИСПРАВЛЕНИЕ: убираем соединительные цилиндры, которые
+     держали форму спирали — именно они оставались на фоне */
+  helixConns.forEach(c=>mrnaGroup.remove(c));helixConns=[];
+  const mats=[];dnaGroup.traverse(o=>{if(o.material){o.material.transparent=true;mats.push(o.material);}});
+  const starts=mrnaMeshes.map(m=>m.position.clone());
+  const L=(n-1)*1.05;mrnaLineX=mrnaMeshes.map((m,i)=>-L/2+i*1.05);
+  await tween(1400/speed,p=>{
+    mats.forEach(m=>m.opacity=1-p);
+    poly.material.opacity=0.85*(1-p);
+    mrnaMeshes.forEach((m,i)=>m.position.lerpVectors(starts[i],new THREE.Vector3(mrnaLineX[i],0.6,0),p));
+  });
+  if(my!==runToken)return;
+  scene.remove(dnaGroup);scene.remove(poly);
+  dnaGroup=null;poly=null;
+  for(let i=1;i<n;i++)
+    addCyl(mrnaGroup,mrnaMeshes[i-1].position.clone(),mrnaMeshes[i].position.clone(),0.07,'#74c0fc');
+  phase='ready';
+  setInfoDna('мРНК выстроена в линию. Запускайте <b>трансляцию</b>.');
+}
+
+function makeTRNA(codonU,aa){
+  const g=new THREE.Group(),armCol='#74c0fc';
+  addCyl(g,new THREE.Vector3(0,0.35,0),new THREE.Vector3(0,2.2,0),0.08,armCol);
+  const col=aa==='Stop'?'#868e96':AA_INFO[aa][1];
+  g.userData.aa=addSphere(g,new THREE.Vector3(0,2.45,0),0.34,col);
+  codonU.split('').forEach((b,j)=>
+    addSphere(g,new THREE.Vector3(-1.05+j*1.05,0.15,0),0.22,COLORS[COMP_R[b]]));
+  return g;
+}
+
+async function translate(my){
+  phase='translating';
+  await moveCam(new THREE.Vector3(0,4,16),new THREE.Vector3(0,0.3,0),900);
+  if(my!==runToken)return;
+  ribGroup=new THREE.Group();scene.add(ribGroup);
+  const small=addSphere(ribGroup,new THREE.Vector3(0,-0.55,0),0.85,'#339af0');
+  small.material.transparent=true;small.material.opacity=0.45;
+  const large=addSphere(ribGroup,new THREE.Vector3(0,1.6,0),1.15,'#1c7ed6');
+  large.material.transparent=true;large.material.opacity=0.35;
+  chainGroup=new THREE.Group();scene.add(chainGroup);
+  chain=[];
+  const codonsN=Math.floor(seq.length/3);
+  const leftover=seq.length-codonsN*3;
+  for(let c=0;c<codonsN;c++){
+    if(my!==runToken)return;
+    mrnaMeshes.forEach(m=>m.scale.setScalar(1));
+    const codonU=seq.slice(3*c,3*c+3).map(l=>l==='T'?'U':l).join('');
+    const aa=CODONS[codonU.replace(/U/g,'T')];
+    const cx=mrnaLineX[3*c+1];
+    [0,1,2].forEach(j=>tween(150/speed,p=>mrnaMeshes[3*c+j].scale.setScalar(1+p*0.5)));
+    const x0=ribGroup.position.x;
+    await tween(c===0?1:260/speed,p=>ribGroup.position.x=x0+(cx-x0)*p);
+    if(my!==runToken)return;
+    setInfoDna(`Кодон <b>${codonU}</b> → <span style="color:${AA_INFO[aa][1]}">${AA_INFO[aa][0]}</span>`);
+    const tr=makeTRNA(codonU,aa);
+    tr.position.set(cx,5.5,0);scene.add(tr);
+    await tween(420/speed,p=>tr.position.y=5.5-5.0*p);
+    if(my!==runToken)return;
+    if(aa==='Stop'){
+      setInfoDna(`Стоп-кодон <b>${codonU}</b> — синтез завершён`);
+      await wait(400);if(my!==runToken)return;
+      await tween(400/speed,p=>tr.position.y=0.5+5*p);
+      if(my!==runToken)return;
+      scene.remove(tr);break;
+    }
+    const aaSphere=tr.userData.aa;
+    const from=new THREE.Vector3();aaSphere.getWorldPosition(from);
+    const cSphere=addSphere(chainGroup,from,0.36,AA_INFO[aa][1]);
+    cSphere.userData.aa=AA_INFO[aa][0];
+    tr.remove(aaSphere);
+    await Promise.all(chain.map(it=>{const fx=it.position.x;
+      return tween(260/speed,p=>it.position.x=fx-1.05*p);}));
+    if(my!==runToken)return;
+    chain.push(cSphere);
+    const slot=new THREE.Vector3(cx,-2.3,0);
+    await tween(300/speed,p=>cSphere.position.lerpVectors(from,slot,p));
+    if(my!==runToken)return;
+    if(chain.length>1)addCyl(chainGroup,chain[chain.length-2].position.clone(),slot,0.09,'#ced4da');
+    await wait(150);
+    if(my!==runToken)return;
+    await tween(320/speed,p=>tr.position.y=0.5+5*p);
+    if(my!==runToken)return;
+    scene.remove(tr);
+  }
+  if(my!==runToken)return;
+  const txt=chain.map(m=>m.userData.aa).join('–');
+  setInfoDna(leftover
+    ?`Готово! Последние ${leftover} нуклеотида не образуют полный кодон. Белок: ${txt}`
+    :`Белок собран! Аминокислотная последовательность: ${txt}`);
+  await tween(700,p=>chainGroup.position.y=-2.2*p);
+  if(my!==runToken)return;
+  phase='done';
+}
+
+function buildCodonTable(){
+  const rows=['T','C','A','G'],cols=['T','C','A','G'],thirds=['T','C','A','G'];
+  let h='<table><tr><th></th>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+  for(const r of rows){
+    h+=`<tr><th>${r}</th>`;
+    for(const c of cols){h+='<td>';
+      for(const t of thirds){const cd=r+c+t,[nm,col]=AA_INFO[CODONS[cd]];
+        h+=`<div class="cd"><span class="sw" style="background:${col}"></span>${cd}·${nm}</div>`;}
+      h+='</td>';}
+    h+='</tr>';}
+  document.getElementById('codonTable').innerHTML=h+'</table>';
+}
+
+/* ================= ВКЛАДКА 2: МИТОЗ И МЕЙОЗ ================= */
+function makeChromatid(color,len=2.3){
+  const g=new THREE.Group(),r=0.17;
+  addCyl(g,new THREE.Vector3(0,-len/2,0),new THREE.Vector3(0,len/2,0),r,color);
+  addSphere(g,new THREE.Vector3(0,len/2,0),r*1.25,color);
+  addSphere(g,new THREE.Vector3(0,-len/2,0),r*1.25,color);
+  return g;
+}
+function makeChromosome(color){
+  const g=new THREE.Group();
+  const c1=makeChromatid(color);c1.position.x=-0.2;
+  const c2=makeChromatid(color);c2.position.x=0.2;
+  addSphere(g,new THREE.Vector3(0,0,0),0.24,'#dee2e6');
+  g.add(c1,c2);
+  g.userData={c1,c2,color};
+  return g;
+}
+function buildCellBase(){
+  clearAll();
+  const cell=new THREE.Mesh(new THREE.SphereGeometry(3.4,32,32),mat('#22406b',{transparent:true,opacity:0.22}));
+  scene.add(cell);
+  const nucl=new THREE.Mesh(new THREE.SphereGeometry(2.1,32,32),mat('#3b5bdb',{transparent:true,opacity:0.15}));
+  scene.add(nucl);
+  const chroms=[];
+  const defs=[{c:'#ff6b6b'},{c:'#c92a2a'},{c:'#5c8bff'},{c:'#1c4ed8'}];
+  const offs=[[-0.9,0.6],[0.8,-0.5],[-0.5,-0.9],[0.9,0.8]];
+  defs.forEach((d,i)=>{
+    const ch=makeChromosome(d.c);
+    ch.position.set(offs[i][0],offs[i][1],i%2?0.6:-0.6);
+    ch.userData.rz0=ch.rotation.z=Math.random()*Math.PI;
+    ch.scale.setScalar(0.45);
+    scene.add(ch);
+    chroms.push(ch);
+  });
+  return {cell,nucl,chroms};
+}
+function spawnCell(x,y,z,R,cellOp=0.22,nuclOp=0.15){
+  const cell=new THREE.Mesh(new THREE.SphereGeometry(R,28,28),mat('#22406b',{transparent:true,opacity:0}));
+  cell.position.set(x,y,z);scene.add(cell);
+  const nucl=new THREE.Mesh(new THREE.SphereGeometry(R*0.62,28,28),mat('#3b5bdb',{transparent:true,opacity:0}));
+  nucl.position.set(x,y,z);scene.add(nucl);
+  tween(700,p=>{cell.material.opacity=cellOp*p;nucl.material.opacity=nuclOp*p;});
+}
+function addPoles(){
+  const poleL=addSphere(scene,new THREE.Vector3(-3.1,0,0),0.32,'#ffd43b');
+  const poleR=addSphere(scene,new THREE.Vector3(3.1,0,0),0.32,'#ffd43b');
+  return {poleL,poleR};
+}
+
+async function runMitosis(my){
+  const st=buildCellBase(),chroms=st.chroms;
+  setInfoMito('Интерфаза: ДНК уже удвоена — каждая хромосома состоит из двух сестринских хроматид.');
+  await wait(600);if(my!==runToken)return;
+  setInfoMito('Профаза: хромосомы уплотняются, ядерная оболочка распадается, формируется веретено.');
+  await tween(900,p=>chroms.forEach(ch=>ch.scale.setScalar(0.45+0.55*p)));
+  if(my!==runToken)return;
+  const {poleL,poleR}=addPoles();
+  chroms.forEach(ch=>[ch.userData.c1,ch.userData.c2].forEach(c=>{
+    makeFiber(()=>new THREE.Vector3(-3.1,0,0),()=>c.getWorldPosition(new THREE.Vector3()));
+    makeFiber(()=>new THREE.Vector3(3.1,0,0),()=>c.getWorldPosition(new THREE.Vector3()));
+  }));
+  await tween(600,p=>st.nucl.material.opacity=0.15*(1-p));
+  if(my!==runToken)return;
+  setInfoMito('Метафаза: хромосомы выстроились по экватору — метафазная пластинка.');
+  const starts=chroms.map(c=>c.position.clone());
+  const rz0s=chroms.map(c=>c.userData.rz0);
+  const zt=[-1.5,-0.5,0.5,1.5];
+  await tween(1300,p=>chroms.forEach((ch,i)=>{
+    ch.position.lerpVectors(starts[i],new THREE.Vector3(0,0,zt[i]),p);
+    ch.rotation.z=rz0s[i]*(1-p);
+  }));
+  if(my!==runToken)return;
+  setInfoMito('Анафаза: веретено тянет сестринские хроматиды к полюсам.');
+  chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
+  const sz=chroms.map(ch=>ch.position.z);
+  await tween(1400,p=>chroms.forEach((ch,i)=>{
+    ch.userData.c1.position.set(-2.7,0,sz[i]);
+    ch.userData.c2.position.set(2.7,0,sz[i]);
+  }));
+  if(my!==runToken)return;
+  setInfoMito('Телофаза и цитокинез: образуются два ядра, клетка делится надвое.');
+  fibers.slice().forEach(f=>scene.remove(f));fibers.length=0;
+  scene.remove(poleL,poleR);
+  const cS=chroms.map(ch=>({a:ch.userData.c1.position.clone(),b:ch.userData.c2.position.clone()}));
+  await tween(900,p=>chroms.forEach((ch,i)=>{
+    ch.userData.c1.position.lerpVectors(cS[i].a,new THREE.Vector3(-1.9,0,sz[i]*0.6),p);
+    ch.userData.c2.position.lerpVectors(cS[i].b,new THREE.Vector3(1.9,0,sz[i]*0.6),p);
+  }));
+  if(my!==runToken)return;
+  spawnCell(-1.9,0,0,2.1);spawnCell(1.9,0,0,2.1);
+  const o0c=st.cell.material.opacity,o0n=st.nucl.material.opacity,o0p=poleL.material.opacity;
+  await tween(700,p=>{
+    st.cell.material.opacity=o0c*(1-p);st.nucl.material.opacity=o0n*(1-p);
+    poleL.material.opacity=o0p*(1-p);poleR.material.opacity=o0p*(1-p);
+  });
+  if(my!==runToken)return;
+  scene.remove(st.cell,st.nucl,poleL,poleR);
+  setInfoMito('<b>Митоз завершён:</b> две дочерние клетки с тем же набором хромосом (2n).');
+  await wait(1500);if(my!==runToken)return;
+  clearAll();
+}
+
+async function runMeiosis(my){
+  const st=buildCellBase(),chroms=st.chroms;
+  const pairs={0:[0,1],1:[2,3]},pairZ={0:-1.1,1:1.1};
+  setInfoMito('Профаза I: гомологичные хромосомы соединяются в биваленты и обмениваются участками — кроссинговер.');
+  await tween(900,p=>chroms.forEach(ch=>ch.scale.setScalar(0.45+0.55*p)));
+  if(my!==runToken)return;
+  const starts=chroms.map(c=>c.position.clone());
+  const rz0s=chroms.map(c=>c.userData.rz0);
+  await tween(1000,p=>{
+    for(const k in pairs){const [a,b]=pairs[k];
+      chroms[a].position.lerpVectors(starts[a],new THREE.Vector3(-0.4,0,pairZ[k]),p);
+      chroms[b].position.lerpVectors(starts[b],new THREE.Vector3(0.4,0,pairZ[k]),p);}
+    chroms.forEach((ch,i)=>ch.rotation.z=rz0s[i]*(1-p));
+  });
+  if(my!==runToken)return;
+  setInfoMito('Кроссинговер: гомологи обмениваются участками — появляется комбинативная изменчивость.');
+  const tips=[];
+  for(const k in pairs){const [a,b]=pairs[k];
+    [[chroms[a],chroms[b].userData.color],[chroms[b],chroms[a].userData.color]].forEach(([ch,col])=>{
+      const tip=addSphere(ch.userData.c1,new THREE.Vector3(0,1.15,0),0.27,col);
+      tip.scale.setScalar(0.01);tips.push(tip);});}
+  await tween(800,p=>tips.forEach(t=>t.scale.setScalar(Math.max(0.01,p))));
+  if(my!==runToken)return;
+  await wait(500);if(my!==runToken)return;
+  setInfoMito('Метафаза I: биваленты выстроились по экватору — гомологи обращены к разным полюсам.');
+  const {poleL,poleR}=addPoles();
+  chroms.forEach(ch=>[ch.userData.c1,ch.userData.c2].forEach(c=>{
+    makeFiber(()=>new THREE.Vector3(-3.1,0,0),()=>c.getWorldPosition(new THREE.Vector3()));
+    makeFiber(()=>new THREE.Vector3(3.1,0,0),()=>c.getWorldPosition(new THREE.Vector3()));
+  }));
+  await wait(600);if(my!==runToken)return;
+  setInfoMito('Анафаза I: к полюсам расходятся <b>целые хромосомы</b> (гомологи), а не хроматиды!');
+  await tween(1300,p=>{
+    for(const k in pairs){const [a,b]=pairs[k];
+      chroms[a].position.x=-0.4-2.4*p;
+      chroms[b].position.x=0.4+2.4*p;}
+  });
+  if(my!==runToken)return;
+  setInfoMito('Телофаза I: две клетки; набор уже гаплоидный (n), но хромосомы ещё удвоены.');
+  fibers.slice().forEach(f=>scene.remove(f));fibers.length=0;
+  scene.remove(poleL,poleR);
+  spawnCell(-2.8,0,0,2.2);spawnCell(2.8,0,0,2.2);
+  const o0c=st.cell.material.opacity,o0n=st.nucl.material.opacity;
+  await tween(700,p=>{st.cell.material.opacity=o0c*(1-p);st.nucl.material.opacity=o0n*(1-p);});
+  if(my!==runToken)return;
+  scene.remove(st.cell,st.nucl);
+  await wait(500);if(my!==runToken)return;
+  setInfoMito('Мейоз II: веретено поворачивается на 90° — теперь расходятся сестринские хроматиды.');
+  await tween(900,p=>chroms.forEach(ch=>{
+    ch.rotation.y=Math.PI/2*p;
+    ch.position.z=ch.position.z*(1-p);
+  }));
+  if(my!==runToken)return;
+  chroms.forEach(ch=>{const x=ch.position.x;
+    [ch.userData.c1,ch.userData.c2].forEach(c=>{
+      makeFiber(()=>new THREE.Vector3(x,0,-2.9),()=>c.getWorldPosition(new THREE.Vector3()));
+      makeFiber(()=>new THREE.Vector3(x,0,2.9),()=>c.getWorldPosition(new THREE.Vector3()));
+    });});
+  await wait(300);if(my!==runToken)return;
+  setInfoMito('Анафаза II: сестринские хроматиды расходятся — всего образуется 4 клетки.');
+  chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
+  const zS=chroms.map(ch=>({a:ch.userData.c1.position.z,b:ch.userData.c2.position.z}));
+  await tween(1300,p=>chroms.forEach((ch,i)=>{
+    ch.userData.c1.position.z=zS[i].a+(-2.9-zS[i].a)*p;
+    ch.userData.c2.position.z=zS[i].b+(2.9-zS[i].b)*p;
+  }));
+  if(my!==runToken)return;
+  fibers.slice().forEach(f=>scene.remove(f));fibers.length=0;
+  spawnCell(-2.8,0,-2.2,1.7);spawnCell(-2.8,0,2.2,1.7);
+  spawnCell(2.8,0,-2.2,1.7);spawnCell(2.8,0,2.2,1.7);
+  setInfoMito('<b>Мейоз завершён:</b> 4 гаплоидные клетки (n), каждая генетически уникальна.');
+  await wait(1500);if(my!==runToken)return;
+  clearAll();
+}
+
+/* ================= ВКЛАДКА 3: тРНК ================= */
+function buildTRNAModel(){
+  clearAll();
+  trnaModel=new THREE.Group();scene.add(trnaModel);
+  const body='#e8b04b',arm='#74c0fc';
+  addCyl(trnaModel,new THREE.Vector3(0,0.4,0),new THREE.Vector3(0,2.4,0),0.14,body);
+  addSphere(trnaModel,new THREE.Vector3(0,2.65,0),0.3,'#a9e34b');
+  addSphere(trnaModel,new THREE.Vector3(0,3.25,0),0.38,'#ff6b6b');
+  addCyl(trnaModel,new THREE.Vector3(0,1.9,0),new THREE.Vector3(-1.5,2.4,0),0.1,body);
+  addSphere(trnaModel,new THREE.Vector3(-1.7,2.6,0),0.22,body);
+  addCyl(trnaModel,new THREE.Vector3(0,0.9,0),new THREE.Vector3(-1.4,0.5,0),0.1,body);
+  addSphere(trnaModel,new THREE.Vector3(-1.6,0.35,0),0.22,body);
+  addCyl(trnaModel,new THREE.Vector3(0,0.5,0),new THREE.Vector3(0.9,-0.6,0),0.1,arm);
+  const anticodon=seq.length>=3?seq.slice(0,3).map(l=>l==='T'?'U':l):['A','U','G'];
+  anticodon.forEach((b,j)=>
+    addSphere(trnaModel,new THREE.Vector3(0.55+j*0.6,-0.75,0),0.22,COLORS[COMP_R[b]]));
+  const lab=(t,x,y,s)=>{const sp=makeLabel(t,s);sp.position.set(x,y,0);trnaModel.add(sp);};
+  lab('Акцепторный стебель',0,1.7,0.9);
+  lab('Аминокислота',0,3.75,0.9);
+  lab('D-петля',-1.9,3.0,0.8);
+  lab('T-петля',-1.9,0.1,0.8);
+  lab('Антикодон',1.6,-0.9,0.9);
+  setInfoTrna('Модель тРНК: акцепторный стебель с 3\u2032-концем (САА) несёт аминокислоту, внизу справа — антикодон, комплементарный кодону. Модель вращается автоматически; сцену можно крутить мышью.');
+}
+
+async function translationDemo(my){
+  phase='translating';
+  clearAll();
+  if(seq.length<3)seq='ATGGCCTATCGTAAAGGCTAA'.split('');
+  const s=seq;
+  const L=(s.length-1)*1.05;
+  mrnaGroup=new THREE.Group();scene.add(mrnaGroup);
+  s.forEach((l,i)=>{
+    const b=l==='T'?'U':l;
+    mrnaMeshes.push(addSphere(mrnaGroup,new THREE.Vector3(-L/2+i*1.05,0.4,0),0.26,COLORS[b]));
+  });
+  for(let i=1;i<s.length;i++)
+    addCyl(mrnaGroup,mrnaMeshes[i-1].position.clone(),mrnaMeshes[i].position.clone(),0.07,'#74c0fc');
+  ribGroup=new THREE.Group();scene.add(ribGroup);
+  const small=addSphere(ribGroup,new THREE.Vector3(0,-0.35,0),0.85,'#339af0');
+  small.material.transparent=true;small.material.opacity=0.4;
+  const large=addSphere(ribGroup,new THREE.Vector3(0,1.4,0),1.15,'#1c7ed6');
+  large.material.transparent=true;large.material.opacity=0.3;
+  const mA=makeLabel('A',0.7);mA.position.set(1.05,-1.5,0);ribGroup.add(mA);
+  const mP=makeLabel('P',0.7);mP.position.set(0,-1.5,0);ribGroup.add(mP);
+  const mE=makeLabel('E',0.7);mE.position.set(-1.05,-1.5,0);ribGroup.add(mE);
+  chainGroup=new THREE.Group();scene.add(chainGroup);
+  chain=[];
+  setInfoTrna('Инициация: рибосома садится на мРНК, стартовая тРНК занимает P-участок.');
+  await moveCam(new THREE.Vector3(0,4,16),new THREE.Vector3(0,0.3,0),900);
+  if(my!==runToken)return;
+  const codonsN=Math.floor(s.length/3);
+  for(let c=0;c<codonsN;c++){
+    if(my!==runToken)return;
+    const codonU=s.slice(3*c,3*c+3).map(l=>l==='T'?'U':l).join('');
+    const aa=CODONS[codonU.replace(/U/g,'T')];
+    const cx=mrnaMeshes[3*c+1].position.x;
+    const P=cx,A=cx+1.05;
+    const ribTarget=c===0?cx:A-1.05;
+    const rx0=ribGroup.position.x;
+    await tween(c===0?500:260/speed,p=>ribGroup.position.x=rx0+(ribTarget-rx0)*p);
+    if(my!==runToken)return;
+    if(aa==='Stop'){
+      setInfoTrna(`Стоп-кодон <b>${codonU}</b> — терминация: полипептид освобождается.`);
+      await wait(600);if(my!==runToken)return;
+      break;
+    }
+    const targetX=c===0?P:A;
+    const tr=makeTRNA(codonU,aa);
+    tr.position.set(targetX+2.2,4.5,0);scene.add(tr);
+    setInfoTrna(`Кодон <b>${codonU}</b>: тРНК с антикодоном <b>${codonU.split('').map(ch=>COMP_R[ch]).join('')}</b> приносит <span style="color:${AA_INFO[aa][1]}">${AA_INFO[aa][0]}</span>.`);
+    await tween(420/speed,p=>{
+      tr.position.x=targetX+2.2-2.2*p;
+      tr.position.y=4.5-3.1*p;
+      tr.rotation.z=0.6*(1-p);
+    });
+    if(my!==runToken)return;
+    if(c>0){
+      setInfoTrna('Пептидная связь: цепь с P-тРНК переносится на новую аминокислоту.');
+      await wait(400);if(my!==runToken)return;
+    }
+    const aaSphere=tr.userData.aa;
+    const from=new THREE.Vector3();aaSphere.getWorldPosition(from);
+    const cSphere=addSphere(chainGroup,from,0.36,AA_INFO[aa][1]);
+    cSphere.userData.aa=AA_INFO[aa][0];
+    tr.remove(aaSphere);
+    await Promise.all(chain.map(it=>{const fx=it.position.x;
+      return tween(260/speed,p=>it.position.x=fx-1.05*p);}));
+    if(my!==runToken)return;
+    chain.push(cSphere);
+    const slot=new THREE.Vector3(targetX,-2.3,0);
+    await tween(300/speed,p=>cSphere.position.lerpVectors(from,slot,p));
+    if(my!==runToken)return;
+    if(chain.length>1)addCyl(chainGroup,chain[chain.length-2].position.clone(),slot,0.09,'#ced4da');
+    await tween(380/speed,p=>{
+      tr.position.x=targetX-1.05*p;
+      tr.position.y=0.5+2.5*p;
+    });
+    if(my!==runToken)return;
+    scene.remove(tr);
+    await wait(150);
+    if(my!==runToken)return;
+  }
+  if(my!==runToken)return;
+  const txt=chain.map(m=>m.userData.aa).join('–');
+  setInfoTrna(`Белок собран (${chain.length} аминокислот): ${txt}`);
+  await tween(700,p=>chainGroup.position.y=-2.2*p);
+  if(my!==runToken)return;
+  phase='done';
+}
+
+/* ================= ВКЛАДКИ И UI ================= */
+const $=id=>document.getElementById(id);
+const setInfoDna=h=>$('infoDna').innerHTML=h;
+const setInfoMito=h=>$('infoMito').innerHTML=h;
+const setInfoTrna=h=>$('infoTrna').innerHTML=h;
+
+function allButtons(){
+  return ['btnBuild','btnTranscribe','btnTranslate','btnResetDna',
+          'btnMito','btnMeio','btnResetMito',
+          'btnTrnaShow','btnTrnaTrans','btnResetTrna'];
+}
+function parseSeq(){
+  const raw=$('seq').value.toUpperCase().replace(/[^ATGC]/g,'');
+  $('seq').value=raw;
+  if(raw.length<6){$('err').textContent='Нужно минимум 6 нуклеотидов (A, T, G, C).';return null;}
+  if(raw.length>60){$('seq').value=raw.slice(0,60);
+    $('err').textContent='Лимит 60 нуклеотидов — лишнее обрезано.';}
+  else $('err').textContent='';
+  return $('seq').value;}
+
+function switchTab(name){
+  runToken++;busy=false;
+  activeTab=name;
+  allButtons().forEach(id=>$(id).disabled=false);
+  document.querySelectorAll('#tabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  $('panelDna').classList.toggle('hidden',name!=='dna');
+  $('panelMito').classList.toggle('hidden',name!=='mito');
+  $('panelTrna').classList.toggle('hidden',name!=='trna');
+  $('rightDna').classList.toggle('hidden',name!=='dna');
+  $('rightMito').classList.toggle('hidden',name!=='mito');
+  $('rightTrna').classList.toggle('hidden',name!=='trna');
+  clearAll();
+  if(name==='dna'){
+    buildDNA(seqStr);
+    $('btnTranscribe').disabled=false;$('btnTranslate').disabled=true;
+  }
+  moveCam(new THREE.Vector3(7,4,17),new THREE.Vector3(0,0,0),600);
+}
+
+document.querySelectorAll('#tabs .tab').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+$('speed').oninput=e=>speed=parseFloat(e.target.value);
+
+$('btnBuild').onclick=()=>{if(busy)return;
+  const s=parseSeq();if(!s)return;
+  buildDNA(s);
+  $('btnTranscribe').disabled=false;$('btnTranslate').disabled=true;};
+$('btnResetDna').onclick=()=>{if(busy)return;clearAll();
+  $('btnTranscribe').disabled=true;$('btnTranslate').disabled=true;
+  setInfoDna('Введите последовательность и нажмите «Построить ДНК».');};
+
+async function runStage(stage){
+  if(busy)return;busy=true;runToken++;
+  const my=runToken;
+  allButtons().forEach(id=>$(id).disabled=true);
+  try{
+    if(stage==='t1')await transcribe(my);
+    if(stage==='t2')await translate(my);
+    if(stage==='mito')await runMitosis(my);
+    if(stage==='meio')await runMeiosis(my);
+    if(stage==='trnaShow')buildTRNAModel();
+    if(stage==='trnaTrans')await translationDemo(my);
+  }finally{
+    if(my===runToken){
+      busy=false;
+      allButtons().forEach(id=>$(id).disabled=false);
+      if(activeTab==='dna'){
+        $('btnTranscribe').disabled=phase!=='built';
+        $('btnTranslate').disabled=phase!=='ready';
+      }
+    }
+  }
+}
+$('btnTranscribe').onclick=()=>runStage('t1');
+$('btnTranslate').onclick=()=>runStage('t2');
+$('btnMito').onclick=()=>runStage('mito');
+$('btnMeio').onclick=()=>runStage('meio');
+$('btnResetMito').onclick=()=>{if(busy)return;clearAll();
+  setInfoMito('Клетка 2n = 4. Нажмите «Митоз» или «Мейоз».');};
+$('btnTrnaShow').onclick=()=>runStage('trnaShow');
+$('btnTrnaTrans').onclick=()=>runStage('trnaTrans');
+$('btnResetTrna').onclick=()=>{if(busy)return;clearAll();
+  setInfoTrna('Выберите «Строение тРНК» или «Трансляция (демо)».');};
+
+/* ================= СТАРТ ================= */
+init();buildCodonTable();
+buildDNA(seqStr);
+</script>
+<script>
+if ('serviceWorker' in navigator)
+  navigator.serviceWorker.register('sw.js');
+</script>
+
+</body>
+</html>

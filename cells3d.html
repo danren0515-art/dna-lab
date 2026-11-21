@@ -32,13 +32,14 @@
 var scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b1020);
 var camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(0, 3, 9);
+camera.position.set(0, 4, 12);
 var renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 var controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.target.set(2.5, 0.3, 0);
 scene.add(new THREE.AmbientLight(0xffffff, .5));
 var dl = new THREE.DirectionalLight(0xffffff, .9); dl.position.set(5,8,5); scene.add(dl);
 var dl2 = new THREE.DirectionalLight(0x88aaff, .4); dl2.position.set(-5,-3,-5); scene.add(dl2);
@@ -48,15 +49,22 @@ function matStd(color, opts){
   opts.color = new THREE.Color(color);
   return new THREE.MeshStandardMaterial(opts);
 }
-function dot(x,y,z,color,s){
+function dot(parent,x,y,z,color,s){
   if(!s) s = 0.12;
   var m = new THREE.Mesh(new THREE.SphereGeometry(s,10,10), matStd(color,{roughness:.6}));
-  m.position.set(x,y,z); return m;
+  m.position.set(x,y,z); parent.add(m); return m;
+}
+function addCylV(parent,a,b,r,color){
+  var dir=new THREE.Vector3().subVectors(b,a), len=dir.length();
+  var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,8), matStd(color));
+  m.position.copy(a).addScaledVector(dir,0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
+  parent.add(m); return m;
 }
 function randomDots(group,n,color,s){
   for(var i=0;i<n;i++){
     var a=Math.random()*Math.PI*2, b=Math.random()*Math.PI, r=Math.random()*1.2;
-    group.add(dot(r*Math.sin(b)*Math.cos(a), (Math.random()-.5)*1.4, r*Math.sin(b)*Math.sin(a), color, s));
+    dot(group, r*Math.sin(b)*Math.cos(a), (Math.random()-.5)*1.4, r*Math.sin(b)*Math.sin(a), color, s);
   }
 }
 function nucleus(group,x,y,z,color){
@@ -78,7 +86,7 @@ function mitochondria(group,x,y,z){
   group.add(mit);
 }
 
-/* РАСТЕНИЯ */
+/* ---------- КЛЕТКИ ЦАРСТВ ---------- */
 function buildPlant(){
   var g = new THREE.Group();
   var wall = new THREE.Mesh(new THREE.BoxGeometry(4.2,4.2,4.2,3,3,3),
@@ -101,7 +109,6 @@ function buildPlant(){
   randomDots(g,25,0xffca28,.07);
   return g;
 }
-/* ЖИВОТНЫЕ */
 function buildAnimal(){
   var g = new THREE.Group();
   var mem = new THREE.Mesh(new THREE.SphereGeometry(2.1,48,48),
@@ -110,11 +117,10 @@ function buildAnimal(){
   nucleus(g,0,.6,0,0x5c6bc0);
   mitochondria(g,1.2,-.6,.5); mitochondria(g,-1.3,-.4,-.5); mitochondria(g,.2,-1.2,1);
   var ly=[[1.5,.9,-.4],[-1.6,.8,.3],[.5,1.4,.6]];
-  for(var i=0;i<ly.length;i++) g.add(dot(ly[i][0],ly[i][1],ly[i][2],0xff7043,.18));
+  for(var i=0;i<ly.length;i++) dot(g,ly[i][0],ly[i][1],ly[i][2],0xff7043,.18);
   randomDots(g,30,0xffca28,.07);
   return g;
 }
-/* ГРИБЫ */
 function buildFungi(){
   var g = new THREE.Group();
   var wall = new THREE.Mesh(new THREE.SphereGeometry(2.2,32,32),
@@ -131,7 +137,6 @@ function buildFungi(){
   randomDots(g,22,0xffca28,.07);
   return g;
 }
-/* БАКТЕРИИ */
 function buildBact(){
   var g = new THREE.Group();
   var bodyMat = matStd(0x26a69a,{transparent:true,opacity:.35});
@@ -151,23 +156,126 @@ function buildBact(){
   return g;
 }
 
+/* ---------- РАЗРЕЗ ОБОЛОЧКИ ---------- */
+function makeLabel(text,x,y,z,parent,scale){
+  if(!scale) scale=0.8;
+  var cv=document.createElement('canvas'); cv.width=512; cv.height=128;
+  var c=cv.getContext('2d');
+  c.font='bold 44px Arial';
+  var w=Math.min(c.measureText(text).width+40,500);
+  c.fillStyle='rgba(8,12,28,0.85)'; c.fillRect((512-w)/2,20,w,88);
+  c.strokeStyle='rgba(140,170,255,0.8)'; c.strokeRect((512-w)/2,20,w,88);
+  c.fillStyle='#fff'; c.textAlign='center'; c.textBaseline='middle';
+  c.fillText(text,256,64);
+  var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
+  sp.scale.set(2.4*scale,0.6*scale,1);
+  sp.position.set(x,y,z);
+  parent.add(sp);
+  return sp;
+}
+
+/* двойной липидный слой: два ряда «головок» + «хвосты» между ними */
+function makeBilayer(g){
+  for(var i=-7;i<=7;i++){
+    var x=i*0.36;
+    dot(g,x,0.28,0,0xffd54f,0.11);
+    dot(g,x,-0.28,0,0xffd54f,0.11);
+    addCylV(g,new THREE.Vector3(x,0.22,0),new THREE.Vector3(x,-0.22,0),0.03,0xa1887f);
+  }
+}
+
+/* слой параллельных волокон (целлюлоза / хитин), повернутых под углом */
+function fiberLayer(g,y,rotY,color){
+  for(var j=-2;j<=2;j++){
+    var cyl=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,5.6,8), matStd(color,{roughness:.55}));
+    cyl.rotation.z=Math.PI/2;
+    if(rotY) cyl.rotation.y=rotY;
+    cyl.position.set(0,y,j*0.3);
+    g.add(cyl);
+  }
+}
+
+/* сетка муреина: два волокна + пептидные перемычки с «узелками» */
+function mureinMesh(g){
+  var fib=0x9c27b0, node=0xce93d8;
+  addCylV(g,new THREE.Vector3(-2.4,0.72,0),new THREE.Vector3(2.4,0.72,0),0.06,fib);
+  addCylV(g,new THREE.Vector3(-2.4,1.02,0),new THREE.Vector3(2.4,1.02,0),0.06,fib);
+  for(var i=0;i<11;i++){
+    var x=-2.4+i*0.48;
+    addCylV(g,new THREE.Vector3(x,0.72,0),new THREE.Vector3(x,1.02,0),0.035,node);
+    dot(g,x,0.72,0,node,0.07);
+    dot(g,x,1.02,0,node,0.07);
+  }
+}
+
+/* гликокаликс: ветвящиеся цепочки гликопротеинов над мембраной */
+function glycocalyx(g){
+  var cols=[0xba68c8,0x9fa8da,0x80cbc4];
+  for(var i=-6;i<=6;i++){
+    var x=i*0.42+(Math.random()-.5)*0.15;
+    if(Math.random()<0.25) continue;
+    var col=cols[i%3];
+    var y=0.42;
+    var n=2+Math.floor(Math.random()*2);
+    for(var j=0;j<n;j++){
+      dot(g,x,y,0,col,0.09);
+      var x2=x+(Math.random()-.5)*0.3;
+      y+=0.22;
+      addCylV(g,new THREE.Vector3(x,y-0.22,0),new THREE.Vector3(x2,y,0),0.025,col);
+      x=x2;
+    }
+  }
+}
+
+function makeWallDetail(k){
+  var g=new THREE.Group();
+  g.position.set(6.4,0.3,0);
+  makeBilayer(g);
+  if(k==='plant'){
+    fiberLayer(g,0.72,0,0x8bc34a);
+    fiberLayer(g,0.98,Math.PI/3,0x7cb342);
+    fiberLayer(g,1.24,Math.PI*2/3,0x689f38);
+    makeLabel('Целлюлоза (волокна крест-накрест)',0,2.0,0,g,0.95);
+  }else if(k==='fungi'){
+    fiberLayer(g,0.72,0,0xa1887f);
+    fiberLayer(g,0.94,Math.PI/4,0x8d6e63);
+    fiberLayer(g,1.16,Math.PI/2.2,0x6d4c41);
+    fiberLayer(g,1.38,Math.PI/3.2,0x5d4037);
+    makeLabel('Хитин (плотные слои)',0,2.0,0,g,0.95);
+  }else if(k==='bact'){
+    mureinMesh(g);
+    makeLabel('Муреин (пептидогликан — сетка)',0,1.9,0,g,0.95);
+  }else{
+    glycocalyx(g);
+    makeLabel('Гликокаликс (гликопротеины) — стенки нет',0,2.0,0,g,0.9);
+  }
+  makeLabel('Фосфолипидный бислой',0,-1.0,0,g,0.85);
+  return g;
+}
+
+/* ---------- ТЕКСТЫ ---------- */
 var texts = {
-  plant:"<b>Клетка растения:</b> целлюлозная стенка (зелёный каркас), хлоропласты (тёмно-зелёные), крупная центральная вакуоль (голубая), ядро (фиолетовое), митохондрии (красные), рибосомы (жёлтые).",
-  animal:"<b>Клетка животного:</b> только мембрана (без стенки), ядро, много митохондрий, лизосомы (оранжевые), рибосомы.",
-  fungi:"<b>Клетка гриба:</b> хитиновая стенка (коричневатая), ядро, вакуоль, митохондрии, рибосомы.",
-  bact:"<b>Бактерия (прокариот):</b> нет ядра! Кольцевая ДНК (жёлтая) лежит прямо в цитоплазме, есть плазмида (оранжевая) и жгутик (салатовый)."
+  plant:"<b>Клетка растения:</b> целлюлозная стенка, хлоропласты (тёмно-зелёные), вакуоль (голубая), ядро, митохондрии, рибосомы.<br><b>Справа — разрез оболочки:</b> снаружи три слоя волокон <b>целлюлозы</b>, переплетённых крест-накрест (придают жёсткость), под ними фосфолипидный бислой (жёлтые головки — наружу и внутрь, коричневые «хвосты» — внутрь слоя).",
+  animal:"<b>Клетка животного:</b> только мембрана, ядро, митохондрии, лизосомы (оранжевые), рибосомы.<br><b>Справа — разрез оболочки:</b> клеточной стенки нет! Снаружи бислоя — <b>гликокаликс</b>: ветвящиеся цепочки гликопротеинов и гликолипидов (узнают сигналы, склеивают клетки в ткани).",
+  fungi:"<b>Клетка гриба:</b> хитиновая стенка, ядро, вакуоль, митохондрии, рибосомы.<br><b>Справа — разрез оболочки:</b> снаружи плотные слои волокон <b>хитина</b> (тот же полимер, что в панцире ракообразных), под ними фосфолипидный бислой.",
+  bact:"<b>Бактерия (прокариот):</b> нет ядра, кольцевая ДНК (жёлтая), плазмида, жгутик.<br><b>Справа — разрез оболочки:</b> снаружи бислоя — <b>муреин (пептидогликан)</b>: сетка из сахарных нитей, скреплённых пептидными перемычками (фиолетовые узелки). Именно его разрушают антибиотики вроде пенициллина."
 };
 
+/* ---------- СБОРКА ---------- */
 var groups = {plant:buildPlant(), animal:buildAnimal(), fungi:buildFungi(), bact:buildBact()};
 for(var k in groups){ groups[k].visible=false; scene.add(groups[k]); }
-groups.plant.visible=true;
-var info=document.getElementById('info');
+var wallGroup=null;
+
 function show(k){
   for(var key in groups) groups[key].visible=(key===k);
+  if(wallGroup) scene.remove(wallGroup);
+  wallGroup=makeWallDetail(k);
   info.innerHTML=texts[k]+"<br><small>Вращай мышкой (или пальцем), колесо — приближение</small>";
   var btns=document.querySelectorAll('#tabs button');
   for(var i=0;i<btns.length;i++) btns[i].classList.toggle('active',btns[i].getAttribute('data-k')===k);
 }
+
+var info=document.getElementById('info');
 var tabBtns=document.querySelectorAll('#tabs button');
 for(var i=0;i<tabBtns.length;i++){
   (function(btn){ btn.onclick=function(){ show(btn.getAttribute('data-k')); }; })(tabBtns[i]);

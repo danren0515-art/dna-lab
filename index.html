@@ -513,13 +513,9 @@ async function runMitosis(my){
   }));
   if(my!==runToken)return;
   setInfoMito('Анафаза: веретено тянет сестринские хроматиды к полюсам.');
-   chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
+     chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
   const zS=chroms.map(ch=>({a:ch.userData.c1.position.z,b:ch.userData.c2.position.z}));
-  const xS=chroms.map(ch=>ch.position.x);
-  const dx=[-0.5,-0.5,0.5,0.5];
   await tween(1300,p=>chroms.forEach((ch,i)=>{
-    ch.userData.c1.position.x=xS[i]+dx[i]*p;
-    ch.userData.c2.position.x=xS[i]+dx[i]*p;
     ch.userData.c1.position.z=zS[i].a+(-2.9-zS[i].a)*p;
     ch.userData.c2.position.z=zS[i].b+(2.9-zS[i].b)*p;
   }));
@@ -606,9 +602,13 @@ async function runMeiosis(my){
     });});
   await wait(300);if(my!==runToken)return;
   setInfoMito('Анафаза II: сестринские хроматиды расходятся — всего образуется 4 клетки.');
-  chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
+ chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
   const zS=chroms.map(ch=>({a:ch.userData.c1.position.z,b:ch.userData.c2.position.z}));
+  const xS=chroms.map(ch=>ch.position.x);
+  const dx=[-0.5,-0.5,0.5,0.5];
   await tween(1300,p=>chroms.forEach((ch,i)=>{
+    ch.userData.c1.position.x=xS[i]+dx[i]*p;
+    ch.userData.c2.position.x=xS[i]+dx[i]*p;
     ch.userData.c1.position.z=zS[i].a+(-2.9-zS[i].a)*p;
     ch.userData.c2.position.z=zS[i].b+(2.9-zS[i].b)*p;
   }));

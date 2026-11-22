@@ -6,8 +6,9 @@
 <title>Клетки человека — 3D</title>
 <style>
   body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#0b1020;color:#fff}
-  #info{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);
-       padding:10px 16px;border-radius:12px;font-size:14px;text-align:center;max-width:90vw;z-index:2}
+  #info{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);
+       padding:12px 18px;border-radius:14px;font-size:14px;text-align:center;max-width:96vw;
+       line-height:1.4;box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:10;white-space:normal}
   #back,#tissueBack,#bloodBack{position:fixed;top:10px;left:10px;background:rgba(255,255,255,.15);color:#fff;
        padding:8px 14px;border-radius:10px;text-decoration:none;z-index:3;cursor:pointer;border:0;font-size:14px}
   #tissueBack,#bloodBack{display:none}
@@ -83,18 +84,44 @@ function addCylV(parent,a,b,r,color){
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
   parent.add(m); return m;
 }
+
+/* ПОДПИСИ: холст подстраивается под текст, длинные фразы переносятся на строки.
+   Поэтому текст больше никогда не обрезается по краям. */
 function makeLabel(text,x,y,z,parent,scale){
   if(!scale) scale=0.8;
-  var cv=document.createElement('canvas'); cv.width=512; cv.height=128;
+  var maxLineW=520;
+  var cv=document.createElement('canvas');
   var c=cv.getContext('2d');
-  c.font='bold 40px Arial';
-  var w=Math.min(c.measureText(text).width+40,500);
-  c.fillStyle='rgba(8,12,28,0.85)'; c.fillRect((512-w)/2,20,w,88);
-  c.strokeStyle='rgba(140,170,255,0.8)'; c.strokeRect((512-w)/2,20,w,88);
-  c.fillStyle='#fff'; c.textAlign='center'; c.textBaseline='middle';
-  c.fillText(text,256,64);
-  var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
-  sp.scale.set(2.4*scale,0.6*scale,1);
+  c.font='bold 36px Arial';
+  var words=String(text).split(' ');
+  var lines=[],cur='';
+  for(var i=0;i<words.length;i++){
+    var t=cur?cur+' '+words[i]:words[i];
+    if(c.measureText(t).width>maxLineW&&cur){lines.push(cur);cur=words[i];}
+    else cur=t;
+  }
+  if(cur)lines.push(cur);
+  var w=0;
+  for(var i=0;i<lines.length;i++) w=Math.max(w,c.measureText(lines[i]).width);
+  cv.width=Math.ceil(w+44);
+  cv.height=lines.length*46+28;
+  c=cv.getContext('2d');
+  c.font='bold 36px Arial';
+  c.fillStyle='rgba(8,12,28,0.85)';
+  c.fillRect(0,0,cv.width,cv.height);
+  c.strokeStyle='rgba(140,170,255,0.8)';
+  c.lineWidth=3;
+  c.strokeRect(2,2,cv.width-4,cv.height-4);
+  c.fillStyle='#fff';
+  c.textAlign='center';
+  c.textBaseline='middle';
+  for(var i=0;i<lines.length;i++)
+    c.fillText(lines[i],cv.width/2,23+i*46);
+  var sp=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false,depthWrite:false
+  }));
+  var hgt=0.62*scale;
+  sp.scale.set(hgt*cv.width/cv.height,hgt,1);
   sp.position.set(x,y,z);
   parent.add(sp);
   return sp;
@@ -223,7 +250,6 @@ function buildOsteo(){
 function miniNeuron(g,px,py,pz){
   var soma=new THREE.Mesh(new THREE.SphereGeometry(.4,24,24),matStd(0x26a69a,{roughness:.5}));
   soma.position.set(px,py,pz); g.add(soma);
-  var d=new THREE.Vector3(-1,.5,.2).normalize();
   addCylV(g,new THREE.Vector3(px,py,pz),
     new THREE.Vector3(px-1.4,py+.8,pz),.1,0x26a69a);
   addCylV(g,new THREE.Vector3(px,py,pz),
@@ -245,7 +271,7 @@ function buildNervousTissue(){
   dot(g,e2.x,e2.y,e2.z,0xff7043,.14);
   dot(g,e3.x,e3.y,e3.z,0xff7043,.14);
   makeLabel('Синапсы (оранжевые): сигнал идёт от клетки к клетке',0,2.8,0,g,.9);
-  makeLabel('Нервная ткань: нейроны + отростки, проводят импульсы',0,-2.6,0,g,.95);
+  makeLabel('Нервная ткань: нейроны и отростки, проводят импульсы',0,-2.6,0,g,.95);
   return g;
 }
 function buildMuscleTissue(){
@@ -472,4 +498,3 @@ setView();
 </script>
 </body>
 </html>
-

@@ -2,306 +2,293 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Вирус — 3D</title>
 <style>
-  body { margin: 0; overflow: hidden; background: #0b1020; color: #fff; font-family: sans-serif; }
-  #ui { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: 90%; padding: 10px; background: rgba(0,0,0,0.7); border-radius: 10px; text-align: center; z-index: 10; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-  button { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; margin: 5px; color: white; }
-  #goBtn { background: #2e7d32; }
-  #goBtn:disabled { background: #555; }
-  #resetBtn { background: #555; }
+  body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#0b1020;color:#fff}
+  #info{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);
+       padding:12px 18px;border-radius:14px;font-size:14px;text-align:center;max-width:96vw;
+       line-height:1.4;z-index:10;white-space:normal}
+  #back{position:fixed;top:10px;left:10px;background:rgba(255,255,255,.15);color:#fff;
+       padding:8px 14px;border-radius:10px;text-decoration:none;z-index:3;font-size:14px}
+  #ctrl{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;
+       flex-wrap:wrap;justify-content:center;z-index:2}
+  #ctrl button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);
+       border-radius:20px;padding:8px 14px;font-size:14px;cursor:pointer}
+  #ctrl button:disabled{opacity:.4;cursor:default}
+  #goBtn{background:#1b5e20;font-weight:bold}
 </style>
 </head>
 <body>
-
-<div id="ui">
-  <div id="info">Нажми зелёную кнопку, чтобы запустить цикл заражения бактериофагом.</div>
-  <br>
-  <button id="goBtn">▶️ Запустить</button>
+<a id="back" href="index.html">← Назад</a>
+<div id="info">Это <b>бактериофаг</b> — вирус, заражающий бактерию. Нажми зелёную кнопку — увидишь весь цикл заражения по шагам.</div>
+<div id="ctrl">
+  <button id="goBtn">▶️ Показать процесс заражения</button>
   <button id="resetBtn">🔄 Сброс</button>
 </div>
 
+<script>
+window.onerror=function(msg){
+  var el=document.getElementById('info');
+  if(el) el.innerHTML='<span style="color:#ff8787">Ошибка: '+msg+'</span>';
+  return false;
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
 <script>
-// --- ИНИЦИАЛИЗАЦИЯ ---
-var scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b1020);
-var camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 200);
-var renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0b1020);
+var camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,200);
+var renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 document.body.appendChild(renderer.domElement);
+var controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+camera.position.set(0,5,16);
+controls.target.set(0,1.2,0);
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+var dl=new THREE.DirectionalLight(0xffffff,0.9); dl.position.set(5,8,5); scene.add(dl);
+var dl2=new THREE.DirectionalLight(0x88aaff,0.4); dl2.position.set(-5,-3,-5); scene.add(dl2);
 
-var controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-camera.position.set(0, 5, 16);
-controls.target.set(0, 1.2, 0);
-
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-var dl = new THREE.DirectionalLight(0xffffff, 0.9); dl.position.set(5, 8, 5); scene.add(dl);
-var dl2 = new THREE.DirectionalLight(0x88aaff, 0.4); dl2.position.set(-5, -3, -5); scene.add(dl2);
-
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
-function mat(color, opts) {
-  if (!opts) opts = {};
-  opts.color = new THREE.Color(color);
+function mat(color,opts){
+  if(!opts){opts={};}
+  opts.color=new THREE.Color(color);
   return new THREE.MeshStandardMaterial(opts);
 }
-
-function dot(parent, x, y, z, color, s) {
-  var m = new THREE.Mesh(new THREE.SphereGeometry(s || 0.12, 10, 10), mat(color, { roughness: 0.6 }));
-  m.position.set(x, y, z);
-  parent.add(m);
-  return m;
+function dot(parent,x,y,z,color,s){
+  if(!s){s=0.12;}
+  var m=new THREE.Mesh(new THREE.SphereGeometry(s,10,10),mat(color,{roughness:0.6}));
+  m.position.set(x,y,z); parent.add(m); return m;
+}
+function cyl(parent,a,b,r,color){
+  var dir=new THREE.Vector3().subVectors(b,a);
+  var len=dir.length();
+  var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,8),mat(color));
+  m.position.copy(a).addScaledVector(dir,0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
+  parent.add(m); return m;
 }
 
-function buildVirus(s) {
-  var g = new THREE.Group();
-  var head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9*s, 0), mat(0x42a5f5, { transparent: true, opacity: 0.9, roughness: 0.35 }));
+function buildVirus(s){
+  if(!s){s=1;}
+  var g=new THREE.Group();
+  var head=new THREE.Mesh(new THREE.IcosahedronGeometry(0.9*s,0),mat(0x42a5f5,{transparent:true,opacity:0.9}));
   g.add(head);
-  var wire = new THREE.Mesh(new THREE.IcosahedronGeometry(0.95*s, 0), new THREE.MeshBasicMaterial({ color: 0x90caf9, wireframe: true }));
+  var wire=new THREE.Mesh(new THREE.IcosahedronGeometry(0.95*s,0),
+      new THREE.MeshBasicMaterial({color:0x90caf9,wireframe:true}));
   g.add(wire);
-  
-  // ДНК внутри
-  var dnaIn = new THREE.Group();
-  for(var i=0; i<26; i++) {
-    var a = Math.random()*Math.PI*2, b = Math.random()*Math.PI;
-    var r = Math.random()*0.45*s;
+  var dnaIn=new THREE.Group();
+  for(var i=0;i<26;i++){
+    var a=Math.random()*Math.PI*2, b=Math.random()*Math.PI;
+    var r=Math.random()*0.45*s;
     dot(dnaIn, r*Math.sin(b)*Math.cos(a), r*Math.cos(b), r*Math.sin(b)*Math.sin(a), 0x69f0ae, 0.09*s);
   }
   g.add(dnaIn);
-
-  // Хвост
-  var tailPos = new THREE.Vector3(0, -0.9*s, 0);
-  var tailEnd = new THREE.Vector3(0, -1.7*s, 0);
-  var cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.09*s, 0.09*s, tailEnd.distanceTo(tailPos), 8), mat(0x90caf9));
-  cyl.position.copy(tailPos).addScaledVector(tailEnd.sub(tailPos).normalize(), tailEnd.distanceTo(tailPos)/2);
-  cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), tailEnd.sub(tailPos).normalize());
-  g.add(cyl);
-
-  // База и ножки
-  var plate = new THREE.Mesh(new THREE.CylinderGeometry(0.3*s, 0.3*s, 0.12*s, 16), mat(0x1565c0));
-  plate.position.y = -1.76*s;
-  g.add(plate);
-  
-  for(var i=0; i<6; i++) {
-    var a = i*Math.PI/3;
-    var p1 = new THREE.Vector3(0.1*s*Math.cos(a), -1.9*s, 0.1*s*Math.sin(a));
-    var p2 = new THREE.Vector3(0.85*s*Math.cos(a), -2.45*s, 0.85*s*Math.sin(a));
-    var len = p1.distanceTo(p2);
-    var c = new THREE.Mesh(new THREE.CylinderGeometry(0.035*s, 0.035*s, len, 8), mat(0x64b5f6));
-    c.position.copy(p1).addScaledVector(p2.sub(p1).normalize(), len/2);
-    c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), p2.sub(p1).normalize());
-    g.add(c);
+  cyl(g,new THREE.Vector3(0,-0.9*s,0),new THREE.Vector3(0,-1.7*s,0),0.09*s,0x90caf9);
+  var plate=new THREE.Mesh(new THREE.CylinderGeometry(0.3*s,0.3*s,0.12*s,16),mat(0x1565c0));
+  plate.position.y=-1.76*s; g.add(plate);
+  cyl(g,new THREE.Vector3(0,-1.82*s,0),new THREE.Vector3(0,-2.05*s,0),0.05*s,0x1565c0);
+  for(var i=0;i<6;i++){
+    var a=i*Math.PI/3;
+    cyl(g,
+      new THREE.Vector3(0.1*s*Math.cos(a),-1.9*s,0.1*s*Math.sin(a)),
+      new THREE.Vector3(0.85*s*Math.cos(a),-2.45*s,0.85*s*Math.sin(a)),
+      0.035*s,0x64b5f6);
   }
-  
-  g.userData = { head: head, wire: wire, dnaIn: dnaIn };
+  g.userData={head:head,dnaIn:dnaIn};
   return g;
 }
 
-function buildBacterium() {
-  var g = new THREE.Group();
-  var cell = new THREE.Mesh(new THREE.SphereGeometry(3, 40, 40), mat(0x2e7d32, { transparent: true, opacity: 0.3, roughness: 0.4 }));
+function buildBacterium(){
+  var g=new THREE.Group();
+  var cell=new THREE.Mesh(new THREE.SphereGeometry(3,40,40),mat(0x2e7d32,{transparent:true,opacity:0.3}));
   g.add(cell);
-  
-  var dnaCoil = new THREE.Group();
-  for(var i=0; i<40; i++) {
-    var a = i*0.4, r = 1.2+0.4*Math.sin(i*0.9);
+  var dnaCoil=new THREE.Group();
+  for(var i=0;i<40;i++){
+    var a=i*0.4, r=1.2+0.4*Math.sin(i*0.9);
     dot(dnaCoil, r*Math.cos(a), 0.5*Math.sin(i*0.55), r*Math.sin(a), 0xaed581, 0.1);
   }
   g.add(dnaCoil);
-  
-  // Включения
-  for(var i=0; i<16; i++) {
-    var a = Math.random()*Math.PI*2, b = Math.random()*Math.PI, r = 1.6+Math.random()*0.7;
-    dot(g, r*Math.sin(b)*Math.cos(a), r*Math.cos(b), r*Math.sin(b)*Math.sin(a), i%3?0x66bb6a:0xffca28, 0.13);
+  for(var i=0;i<16;i++){
+    var a=Math.random()*Math.PI*2, b=Math.random()*Math.PI, r=1.6+Math.random()*0.7;
+    dot(g, r*Math.sin(b)*Math.cos(a), r*Math.cos(b), r*Math.sin(b)*Math.sin(a),
+        i%3?0x66bb6a:0xffca28, 0.13);
   }
-  
-  g.userData = { cell: cell, dnaCoil: dnaCoil };
+  g.userData={cell:cell,dnaCoil:dnaCoil};
   return g;
 }
 
-// --- ЛОГИКА АНИМАЦИИ ---
-var infoEl = document.getElementById('info');
-var goBtn = document.getElementById('goBtn');
-var resetBtn = document.getElementById('resetBtn');
-var virus, bact, vDna, offspring = , extra = ;
-var runToken = 0;
+var infoEl=document.getElementById('info');
+var goBtn=document.getElementById('goBtn');
+var runToken=0;
+var virus=null, bact=null, vDna=null;
+var offspring=[]; var extra=[];
 
-function clearScene() {
-  offspring.forEach(o => scene.remove(o)); offspring = ;
-  extra.forEach(o => scene.remove(o)); extra = ;
-  if(virus) { scene.remove(virus); virus = null; }
-  if(bact) { scene.remove(bact); bact = null; }
-  if(vDna) { scene.remove(vDna); vDna = null; }
+function clearScene(){
+  for(var i=0;i<offspring.length;i++){ scene.remove(offspring[i]); }
+  for(var i=0;i<extra.length;i++){ scene.remove(extra[i]); }
+  offspring=[]; extra=[];
+  if(virus){scene.remove(virus); virus=null;}
+  if(bact){scene.remove(bact); bact=null;}
+  if(vDna){scene.remove(vDna); vDna=null;}
 }
 
-function resetScene() {
+function resetScene(){
   runToken++;
   clearScene();
-  bact = buildBacterium();
-  scene.add(bact);
-  virus = buildVirus(1);
-  virus.position.set(3.5, 6.2, 2);
-  virus.rotation.z = -0.3;
+  bact=buildBacterium(); scene.add(bact);
+  virus=buildVirus(1);
+  virus.position.set(3.5,6.2,2);
+  virus.rotation.z=-0.3;
   scene.add(virus);
-  infoEl.innerText = "Нажми зелёную кнопку, чтобы запустить цикл заражения бактериофагом.";
+  infoEl.innerHTML='Это <b>бактериофаг</b> — вирус, заражающий бактерию. Нажми зелёную кнопку — увидишь весь цикл заражения по шагам.';
 }
 
-function wait(ms) {
-  return new Promise(r => setTimeout(r, ms));
+function wait(ms,my){
+  return new Promise(function(res){
+    setTimeout(function(){
+      if(my!==runToken){res();return;}
+      res();
+    },ms);
+  });
 }
 
-async function tween(dur, fn, my) {
-  return new Promise(res => {
-    var t0 = performance.now();
-    function step() {
-      if(my !== runToken) { res(); return; }
-      var p = Math.min((performance.now() - t0) / dur, 1);
+function tween(dur,fn,my){
+  return new Promise(function(res){
+    var t0=performance.now();
+    function step(){
+      if(my!==runToken){res();return;}
+      var p=Math.min((performance.now()-t0)/dur,1);
       fn(p);
-      if(p < 1) requestAnimationFrame(step);
-      else res();
+      if(p<1){requestAnimationFrame(step);} else {res();}
     }
     step();
   });
 }
 
-async function runCycle(my) {
-  // Стадия 1: Прикрепление
-  infoEl.innerHTML = "<b>1. Прикрепление.</b> Фаг садится на бактерию. Хвостовые волокна цепляются за рецепторы.";
-  var startPos = virus.position.clone();
-  var dockPos = new THREE.Vector3(0, 3 + 2.45, 0); // 3 - радиус клетки
-  
-  await tween(1600, p => {
-    virus.position.lerpVectors(startPos, dockPos, p);
-    virus.rotation.z = -0.3 * (1-p);
-  }, my);
-  if(my !== runToken) return;
-
-  // Вспышка контакта
-  var flash = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 20), mat(0xffca28, { transparent: true, opacity: 0.9 }));
-  flash.position.set(0, 3, 0);
+async function runCycle(my){
+  infoEl.innerHTML='<b>1. Прикрепление.</b> Фаг садится на бактерию: хвостовые волокна цепляются за рецепторы на её поверхности.';
+  var startPos=virus.position.clone();
+  var dockPos=new THREE.Vector3(0,5.45,0);
+  await tween(1600,function(p){
+    virus.position.lerpVectors(startPos,dockPos,p);
+    virus.rotation.z=-0.3*(1-p);
+  },my);
+  if(my!==runToken){return;}
+  var flash=new THREE.Mesh(new THREE.SphereGeometry(0.5,20,20),mat(0xffca28,{transparent:true,opacity:0.9}));
+  flash.position.set(0,3,0);
   scene.add(flash); extra.push(flash);
-  await tween(900, p => {
-    flash.scale.setScalar(0.3 + 1.3*p);
-    flash.material.opacity = 0.9 * (1-p);
-  }, my);
-  scene.remove(flash); extra.pop();
-  await wait(400); if(my !== runToken) return;
+  await tween(900,function(p){
+    flash.scale.setScalar(0.3+1.3*p);
+    flash.material.opacity=0.9*(1-p);
+  },my);
+  if(my!==runToken){return;}
+  scene.remove(flash);
+  await wait(400,my); if(my!==runToken){return;}
 
-  // Стадия 2: Впрыск ДНК
-  infoEl.innerHTML = "<b>2. Впрыск ДНК.</b> Хвост сокращается, прокалывает стенку. ДНК уходит внутрь. Капсид пустеет.";
-  await tween(450, p => virus.position.y = dockPos.y - 0.55*p, my);
-  if(my !== runToken) return;
-
-  // Анимация капель ДНК
-  var tip = new THREE.Vector3(0, 3 + 2.45 - 0.55 - 2.45, 0);
-  for(var i=0; i<14; i++) {
-    if(my !== runToken) return;
-    var from = tip.clone().add(new THREE.Vector3((Math.random()-0.5)*0.2, 0, (Math.random()-0.5)*0.2));
-    var to = new THREE.Vector3((Math.random()-0.5)*2.2, -1.2+Math.random()*2.2, (Math.random()-0.5)*2.2);
-    var b = dot(scene, from.x, from.y, from.z, 0x69f0ae, 0.11); extra.push(b);
-    tween(430, p => b.position.lerpVectors(from, to, p), my);
-    await wait(95);
+  infoEl.innerHTML='<b>2. Впрыск ДНК.</b> Хвост прокалывает стенку, зелёные бусины — вирусная ДНК — уходят внутрь клетки. Снаружи остаётся пустой серый капсид.';
+  await tween(450,function(p){
+    virus.position.y=dockPos.y-0.55*p;
+  },my);
+  if(my!==runToken){return;}
+  var tip=new THREE.Vector3(0,2.45,0);
+  for(var i=0;i<14;i++){
+    if(my!==runToken){return;}
+    var from=tip.clone().add(new THREE.Vector3((Math.random()-0.5)*0.2,0,(Math.random()-0.5)*0.2));
+    var to=new THREE.Vector3((Math.random()-0.5)*2.2,-1.2+Math.random()*2.2,(Math.random()-0.5)*2.2);
+    var b=dot(scene,from.x,from.y,from.z,0x69f0ae,0.11); extra.push(b);
+    var bFrom=from.clone(), bTo=to.clone();
+    tween(430,function(p){ b.position.lerpVectors(bFrom,bTo,p); },my);
+    await wait(95,my);
   }
-  if(my !== runToken) return;
-
-  // Опустошение головы
-  await tween(500, p => {
-    virus.userData.dnaIn.children.forEach(c => c.scale.setScalar(Math.max(0.01, 1-p)));
-    var col = new THREE.Color(0x999999); // Серый
-    virus.userData.head.material.color.copy(col);
-  }, my);
-  if(my !== runToken) return;
-
-  // Появление ДНК внутри
-  vDna = new THREE.Group();
-  for(var i=0; i<30; i++) {
-    var a = Math.random()*Math.PI*2, b = Math.random()*Math.PI;
-    var r = Math.random()*1.6;
+  if(my!==runToken){return;}
+  await tween(500,function(p){
+    var k=Math.max(0.01,1-p);
+    for(var j=0;j<virus.userData.dnaIn.children.length;j++){
+      virus.userData.dnaIn.children[j].scale.setScalar(k);
+    }
+    virus.userData.head.material.color.setRGB(0.56+0.1*p,0.64+0.05*p,0.68+0.05*p);
+  },my);
+  if(my!==runToken){return;}
+  vDna=new THREE.Group();
+  for(var i=0;i<30;i++){
+    var a=Math.random()*Math.PI*2, b=Math.random()*Math.PI, r=Math.random()*1.6;
     dot(vDna, r*Math.sin(b)*Math.cos(a), -0.8+Math.random()*2.4, r*Math.sin(b)*Math.sin(a), 0x69f0ae, 0.1);
   }
   vDna.scale.setScalar(0.01);
   scene.add(vDna);
-  await tween(600, p => vDna.scale.setScalar(Math.max(0.01, p)), my);
-  if(my !== runToken) return;
-  await wait(500); if(my !== runToken) return;
+  await tween(600,function(p){ vDna.scale.setScalar(Math.max(0.01,p)); },my);
+  if(my!==runToken){return;}
+  await wait(500,my); if(my!==runToken){return;}
 
-  // Стадия 3: Сборка
-  infoEl.innerHTML = "<b>3. Сборка.</b> Клетка производит новые вирусы. Они появляются внутри.";
-  for(var i=0; i<12; i++) {
-    if(my !== runToken) return;
-    var mv = buildVirus(0.45);
-    var a = Math.random()*Math.PI*2, r = Math.random()*1.5;
-    mv.position.set(Math.cos(a)*r, -0.8+Math.random()*2.0, Math.sin(a)*r);
-    mv.scale.setScalar(0.01); mv.visible = false;
+  infoEl.innerHTML='<b>3. Сборка.</b> Клеточные механизмы перехвачены вирусом: внутри клетки один за другим собираются новые фаги. Клетка набухает.';
+  for(var i=0;i<12;i++){
+    if(my!==runToken){return;}
+    var mv=buildVirus(0.45);
+    var a=Math.random()*Math.PI*2, r=Math.random()*1.5;
+    mv.position.set(Math.cos(a)*r,-0.8+Math.random()*2.0,Math.sin(a)*r);
+    mv.scale.setScalar(0.01); mv.visible=false;
     scene.add(mv); offspring.push(mv);
-    (function(m) { tween(500, p => { m.visible = true; m.scale.setScalar(Math.max(0.01, p)); }, my); })(mv);
-    await wait(200);
+    var mm=mv;
+    tween(500,function(p){ mm.visible=true; mm.scale.setScalar(Math.max(0.01,p)); },my);
+    await wait(200,my);
   }
-  if(my !== runToken) return;
-  await tween(600, p => bact.userData.cell.scale.setScalar(1 + 0.06*p), my);
-  if(my !== runToken) return;
-  await wait(900); if(my !== runToken) return;
+  if(my!==runToken){return;}
+  await tween(600,function(p){ bact.userData.cell.scale.setScalar(1+0.06*p); },my);
+  if(my!==runToken){return;}
+  await wait(900,my); if(my!==runToken){return;}
 
-  // Стадия 4: Лизис (Взрыв)
-  infoEl.innerHTML = "<b>4. Лизис.</b> Клетка лопается! Новые вирусы вылетают наружу.";
-  var explosion = new THREE.Mesh(new THREE.SphereGeometry(3, 32, 32), mat(0xff7043, { transparent: true, opacity: 0.35 }));
+  infoEl.innerHTML='<b>4. Лизис.</b> Клетка лопается! Готовые фаги вырываются наружу — каждый готов заразить новую бактерию.';
+  var explosion=new THREE.Mesh(new THREE.SphereGeometry(3,32,32),mat(0xff7043,{transparent:true,opacity:0.35}));
   scene.add(explosion); extra.push(explosion);
-  
-  var starts = offspring.map(m => m.position.clone());
-  var dirs = offspring.map(m => {
-    var d = new THREE.Vector3(m.position.x, 0.4+Math.random()*1.2, m.position.z).normalize();
-    return d.length() < 0.1 ? new THREE.Vector3(0,1,0) : d;
-  });
-  var ends = offspring.map((m, i) => starts[i].clone().addScaledVector(dirs[i], 7.5 + Math.random()*1.5));
-
-  await tween(1400, p => {
-    bact.userData.cell.material.opacity = 0.3 * (1-p);
-    bact.userData.cell.scale.setScalar(1.06 + 0.12*p);
-    bact.userData.dnaCoil.visible = false;
-    vDna.visible = false;
-    explosion.scale.setScalar(1 + 1.1*p);
-    explosion.material.opacity = 0.35 * (1-p);
-    offspring.forEach((m, i) => m.position.lerpVectors(starts[i], ends[i], p));
-  }, my);
-  
-  if(my !== runToken) return;
-  scene.remove(virus); virus = null;
-  scene.remove(bact); bact = null;
-  scene.remove(vDna); vDna = null;
-  
-  await wait(2500); if(my !== runToken) return;
-  infoEl.innerHTML = "<b>Цикл завершён!</b> Из одной клетки вышло 12 новых фагов. Они готовы заражать новые клетки.";
-  await wait(4000); if(my !== runToken) return;
+  var starts=[]; var dirs=[]; var ends=[];
+  for(var i=0;i<offspring.length;i++){
+    starts.push(offspring[i].position.clone());
+    var d=new THREE.Vector3(offspring[i].position.x,0.4+Math.random()*1.2,offspring[i].position.z).normalize();
+    if(d.length()<0.1){d=new THREE.Vector3(0,1,0);}
+    dirs.push(d);
+    ends.push(starts[i].clone().addScaledVector(d,7.5+Math.random()*1.5));
+  }
+  await tween(1400,function(p){
+    bact.userData.cell.material.opacity=0.3*(1-p);
+    bact.userData.cell.scale.setScalar(1.06+0.12*p);
+    bact.userData.dnaCoil.visible=false;
+    vDna.visible=false;
+    explosion.scale.setScalar(1+1.1*p);
+    explosion.material.opacity=0.35*(1-p);
+    for(var i=0;i<offspring.length;i++){
+      offspring[i].position.lerpVectors(starts[i],ends[i],p);
+    }
+  },my);
+  if(my!==runToken){return;}
+  scene.remove(virus); virus=null;
+  scene.remove(bact); bact=null;
+  scene.remove(vDna); vDna=null;
+  await wait(2500,my); if(my!==runToken){return;}
+  infoEl.innerHTML='<b>Цикл завершён!</b> Из одной клетки вышло 12 новых фагов. Так один вирус за считанные часы уничтожает целую популяцию бактерий.';
+  await wait(4000,my); if(my!==runToken){return;}
   resetScene();
 }
 
-goBtn.onclick = function() {
-  if(this.disabled) return;
-  this.disabled = true;
+goBtn.onclick=function(){
+  if(this.disabled){return;}
+  this.disabled=true;
   runToken++;
-  var my = runToken;
-  runCycle(my).then(() => { this.disabled = false; });
+  var my=runToken;
+  runCycle(my).then(function(){ goBtn.disabled=false; });
 };
+document.getElementById('resetBtn').onclick=resetScene;
 
-resetBtn.onclick = resetScene;
-
-window.addEventListener('resize', () => {
-  camera.aspect = innerWidth/innerHeight;
+window.addEventListener('resize',function(){
+  camera.aspect=innerWidth/innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(innerWidth,innerHeight);
 });
 
 resetScene();
-
-(function loop() {
-  requestAnimationFrame(loop);
-  controls.update();
-  renderer.render(scene, camera);
-})();
+(function loop(){ requestAnimationFrame(loop); controls.update(); renderer.render(scene,camera); })();
 </script>
 </body>
 </html>
-

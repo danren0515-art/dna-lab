@@ -45,7 +45,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 document.body.appendChild(renderer.domElement);
 var controls=new THREE.OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;
-camera.position.set(0,4,15);
+camera.position.set(0,4,16);
 controls.target.set(0,0.5,0);
 scene.add(new THREE.AmbientLight(0xffffff,0.55));
 var dl=new THREE.DirectionalLight(0xffffff,0.9); dl.position.set(5,8,5); scene.add(dl);
@@ -60,6 +60,15 @@ function dot(parent,x,y,z,color,s){
   if(!s){s=0.12;}
   var m=new THREE.Mesh(new THREE.SphereGeometry(s,10,10),mat(color,{roughness:0.6}));
   m.position.set(x,y,z); parent.add(m); return m;
+}
+function tube(parent,a,b,r1,r2,color,opacity){
+  var dir=new THREE.Vector3().subVectors(b,a);
+  var len=dir.length();
+  var m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,len,16,1,true),
+      mat(color,{transparent:true,opacity:opacity,roughness:0.5,side:THREE.DoubleSide}));
+  m.position.copy(a).addScaledVector(dir,0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
+  parent.add(m); return m;
 }
 function makeLabel(text,x,y,z,parent,scale){
   if(!scale){scale=0.8;}
@@ -96,108 +105,169 @@ function makeLabel(text,x,y,z,parent,scale){
   return sp;
 }
 
-/* ================= ВКЛАДКА: ДЫХАНИЕ ================= */
-/* Альвеолы, которые дышат (расширяются-сжимаются),
-   O2 входит сверху, CO2 и H2O выходят снизу вверх */
+/* ================= ВКЛАДКА: ДЫХАНИЕ =================
+   Логика синхронизирована с дыхательным циклом:
+   ВДОХ (0–42%): альвеолы раздуваются, O2 входит по бронхиолам
+   ПАУЗА (42–55%)
+   ВЫДОХ (55–92%): альвеолы сдуваются, CO2 и H2O выходят по бронхиолам */
+var BREATH_PERIOD=6.0;
+var INHALE_END=0.42, HOLD_END=0.55, EXHALE_END=0.92;
 var breathClock=0;
-var alveoliGroup=null;
-var mols=[];
+var alveoliGroup=null, alveoli=[];
+var molO2=[], molCO2=[];
+var o2Timer=0, co2Timer=0;
+var branchEnds=[];
+
+function breathP(phase){
+  if(phase<INHALE_END){return phase/INHALE_END;}
+  if(phase<HOLD_END){return 1;}
+  if(phase<EXHALE_END){return 1-(phase-HOLD_END)/(EXHALE_END-HOLD_END);}
+  return 0;
+}
 
 function buildRespiration(){
   var g=new THREE.Group();
 
-  /* Гроздь альвеол: 16 пузырьков вокруг центра */
+  /* Главный бронхиол: широкая трубка сверху, сужается книзу */
+  tube(g,new THREE.Vector3(0,7.0,0),new THREE.Vector3(0,2.0,0),0.55,0.3,0xffccbc,0.3);
+
+  /* Ветви бронхиол — ведут к грозди альвеол */
+  branchEnds=[
+    new THREE.Vector3(-1.5,0.9,0.4),
+    new THREE.Vector3(1.5,0.9,-0.4),
+    new THREE.Vector3(0,0.7,-1.5),
+    new THREE.Vector3(0.2,0.6,1.5)
+  ];
+  for(var i=0;i<branchEnds.length;i++){
+    tube(g,new THREE.Vector3(0,2.0,0),branchEnds[i],0.2,0.13,0xffab91,0.4);
+  }
+
+  /* Гроздь альвеол в центре */
   alveoliGroup=new THREE.Group();
   var alvMat=mat(0xffb3ab,{roughness:0.55,transparent:true,opacity:0.75});
-  for(var i=0;i<16;i++){
-    var r=0.75+Math.random()*0.55;
-    var a=Math.random()*Math.PI*2;
-    var b=Math.random()*Math.PI;
-    var dist=Math.random()*2.1;
+  for(var i=0;i<14;i++){
+    var r=0.7+Math.random()*0.5;
+    var ang=Math.random()*Math.PI*2;
+    var el=Math.random()*Math.PI;
+    var dist=0.9+Math.random()*1.1;
     var alv=new THREE.Mesh(new THREE.SphereGeometry(r,20,20),alvMat);
     alv.position.set(
-      dist*Math.sin(b)*Math.cos(a),
-      dist*Math.cos(b)*0.7,
-      dist*Math.sin(b)*Math.sin(a)
+      dist*Math.sin(el)*Math.cos(ang),
+      dist*Math.cos(el)*0.8-0.2,
+      dist*Math.sin(el)*Math.sin(ang)
     );
     alveoliGroup.add(alv);
+    alveoli.push(alv);
   }
   g.add(alveoliGroup);
 
-  /* Капиллярная сеть вокруг альвеол — тонкие красные линии */
-  var capMat=mat(0xe53935);
-  for(var i=0;i<10;i++){
+  /* Капиллярная сеть вокруг альвеол */
+  for(var i=0;i<8;i++){
     var a1=Math.random()*Math.PI*2;
-    var p1=new THREE.Vector3(Math.cos(a1)*2.6,-1.2+Math.random()*2.4,Math.sin(a1)*2.6);
-    var p2=new THREE.Vector3(Math.cos(a1+1.5)*2.6,-1.2+Math.random()*2.4,Math.sin(a1+1.5)*2.6);
-    var len=p1.distanceTo(p2);
-    var seg=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,len,6),capMat);
-    seg.position.copy(p1).addScaledVector(new THREE.Vector3().subVectors(p2,p1),0.5);
-    seg.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3().subVectors(p2,p1).normalize());
-    g.add(seg);
-  }
-  makeLabel('Капилляры — здесь O₂ переходит в кровь, а CO₂ из крови в альвеолы',0,-2.9,0,g,0.9);
-
-  /* Молекулы O2 — голубые, летят сверху вниз (в альвеолы) */
-  for(var i=0;i<14;i++){
-    var o2=dot(g,0,0,0,0x64b5f6,0.13);
-    o2.userData={type:'o2'};
-    respawnO2(o2,true);
-    mols.push(o2);
-  }
-  /* CO2 — оранжевые, H2O — бирюзовые, летят из альвеол вверх */
-  for(var i=0;i<10;i++){
-    var isH2O=(i%2===0);
-    var m=dot(g,0,0,0,isH2O?0x4dd0e1:0xff7043,0.13);
-    m.userData={type:isH2O?'h2o':'co2'};
-    respawnOut(m,true);
-    mols.push(m);
+    var p1=new THREE.Vector3(Math.cos(a1)*2.4,-1.0+Math.random()*2.2,Math.sin(a1)*2.4);
+    var p2=new THREE.Vector3(Math.cos(a1+1.2)*2.4,-1.0+Math.random()*2.2,Math.sin(a1+1.2)*2.4);
+    tube(g,p1,p2,0.035,0.035,0xe53935,0.9);
   }
 
-  makeLabel('O₂ (голубые) — входят в альвеолы',-3.6,4.4,0,g,0.95);
-  makeLabel('CO₂ (оранжевые) и H₂O (бирюзовые) — выходят',3.2,4.4,0,g,0.95);
-  makeLabel('Альвеолы расширяются на вдохе и сжимаются на выдохе',0,-4.0,0,g,0.95);
+  makeLabel('Бронхиол: вход и выход воздуха',-3.2,5.6,0,g,0.9);
+  makeLabel('Вдох: альвеолы надуваются — O₂ (голубые) входит',0,4.4,2.6,g,0.9);
+  makeLabel('Выдох: альвеолы сдуваются — CO₂ (оранжевые) и H₂O (бирюзовые) выходят',0,-2.2,-2.6,g,0.9);
+  makeLabel('Капилляры вокруг альвеол: O₂ уходит в кровь здесь',3.0,-0.6,1.5,g,0.8);
   return g;
 }
-function respawnO2(m,anyY){
-  m.position.set((Math.random()-0.5)*3.0, anyY?(Math.random()*6-0.5):5.5+Math.random()*1.5, (Math.random()-0.5)*3.0);
-  m.userData.vy=-1.4-Math.random()*0.5;
-  m.userData.vx=(Math.random()-0.5)*0.4;
-  m.userData.vz=(Math.random()-0.5)*0.4;
+
+/* Движение молекулы по ломаной траектории (путь — массив точек) */
+function pathPoint(pts,p){
+  var segs=[]; var total=0;
+  for(var i=0;i<pts.length-1;i++){
+    var l=pts[i].distanceTo(pts[i+1]); segs.push(l); total+=l;
+  }
+  var d=p*total, acc=0;
+  for(var i=0;i<segs.length;i++){
+    if(d<=acc+segs[i]||i===segs.length-1){
+      var t=(d-acc)/segs[i];
+      return new THREE.Vector3().lerpVectors(pts[i],pts[i+1],Math.min(Math.max(t,0),1));
+    }
+    acc+=segs[i];
+  }
+  return pts[pts.length-1].clone();
 }
-function respawnOut(m,anyY){
-  m.position.set((Math.random()-0.5)*2.6, anyY?(Math.random()*6-2.5):(-0.5+Math.random()*1.5), (Math.random()-0.5)*2.6);
-  m.userData.vy=1.1+Math.random()*0.5;
-  m.userData.vx=(Math.random()-0.5)*0.4;
-  m.userData.vz=(Math.random()-0.5)*0.4;
+
+function spawnO2(){
+  var target=branchEnds[Math.floor(Math.random()*branchEnds.length)];
+  var alv=alveoli[Math.floor(Math.random()*alveoli.length)];
+  var m=dot(null,0,0,0,0x64b5f6,0.13);
+  m.userData={
+    type:'o2',
+    p:0,
+    speed:1.7,
+    pts:[new THREE.Vector3(0,6.9,0),new THREE.Vector3(0,2.0,0),target.clone(),alv.position.clone()]
+  };
+  alveoliGroup.parent.add(m);
+  molO2.push(m);
 }
+function spawnCO2(){
+  var isH2O=(Math.random()<0.35);
+  var alv=alveoli[Math.floor(Math.random()*alveoli.length)];
+  var branch=branchEnds[Math.floor(Math.random()*branchEnds.length)];
+  var m=dot(null,0,0,0,isH2O?0x4dd0e1:0xff7043,0.13);
+  m.userData={
+    type:isH2O?'h2o':'co2',
+    p:0,
+    speed:1.7,
+    pts:[alv.position.clone(),branch.clone(),new THREE.Vector3(0,2.0,0),new THREE.Vector3(0,7.2,0)]
+  };
+  alveoliGroup.parent.add(m);
+  molCO2.push(m);
+}
+function killMol(m,arr){
+  m.parent.remove(m);
+  arr.splice(arr.indexOf(m),1);
+}
+
 function updateRespiration(dt){
   breathClock+=dt;
-  /* Дыхательный цикл: период 4 секунды */
-  var k=1+0.13*Math.sin(breathClock*Math.PI/2);
+  var phase=(breathClock%BREATH_PERIOD)/BREATH_PERIOD;
+  var p=breathP(phase);
+
+  /* Вдох-выдох: альвеолы дышат синхронно */
+  var k=1+0.30*p;
   alveoliGroup.scale.setScalar(k);
-  /* Молекулы */
-  for(var i=0;i<mols.length;i++){
-    var m=mols[i];
-    m.position.x+=m.userData.vx*dt;
-    m.position.y+=m.userData.vy*dt;
-    m.position.z+=m.userData.vz*dt;
-    if(m.userData.type==='o2'){
-      if(m.position.y<-0.6){respawnO2(m,false);}
-    }else{
-      if(m.position.y>5.2){respawnOut(m,false);}
-    }
+
+  var inhaling=(phase<INHALE_END);
+  var exhaling=(phase>=HOLD_END&&phase<EXHALE_END);
+
+  /* O2 рождаются только на вдохе */
+  o2Timer+=dt;
+  if(inhaling&&o2Timer>0.42&&molO2.length<9){spawnO2();o2Timer=0;}
+  /* CO2 и H2O рождаются только на выдохе */
+  co2Timer+=dt;
+  if(exhaling&&co2Timer>0.4&&molCO2.length<9){spawnCO2();co2Timer=0;}
+
+  /* Движение O2: вниз по бронхиолам, в альвеолы — и растворяются */
+  for(var i=molO2.length-1;i>=0;i--){
+    var m=molO2[i];
+    m.userData.p+=m.userData.speed*dt/BREATH_PERIOD*2.4;
+    if(m.userData.p>=1){killMol(m,molO2);continue;}
+    m.position.copy(pathPoint(m.userData.pts,m.userData.p));
+    var s=Math.max(0.01,1-Math.max(0,(m.userData.p-0.9)/0.1));
+    m.scale.setScalar(s);
+  }
+  /* Движение CO2/H2O: из альвеол, вверх по бронхиолам — и наружу */
+  for(var i=molCO2.length-1;i>=0;i--){
+    var m=molCO2[i];
+    m.userData.p+=m.userData.speed*dt/BREATH_PERIOD*2.4;
+    if(m.userData.p>=1){killMol(m,molCO2);continue;}
+    m.position.copy(pathPoint(m.userData.pts,m.userData.p));
+    var s0=Math.min(1,m.userData.p/0.08);
+    m.scale.setScalar(Math.max(0.01,s0));
   }
 }
 
 /* ============== ВКЛАДКА: КРОВООБРАЩЕНИЕ ============== */
-/* Артерия с прозрачным «окном» посередине,
-   клетки движутся в одну сторону: много эритроцитов,
-   мало лейкоцитов и тромбоцитов */
 var bloodCells=[];
 
 function buildRBC(){
-  /* Двояковогнутый эритроцит */
   var prof=[
     new THREE.Vector2(0.0,0.05),
     new THREE.Vector2(0.18,0.07),
@@ -231,24 +301,20 @@ function buildPLT(){
 
 function buildCirculation(){
   var g=new THREE.Group();
-
-  /* Стенки артерии: верх и низ непрозрачные, середина — прозрачное «окно» */
   var wallMat=mat(0xc62828,{roughness:0.5,transparent:true,opacity:0.85});
   var low=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,2.5,32),wallMat);
   low.position.y=-2.75; g.add(low);
   var high=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,2.5,32),wallMat);
   high.position.y=2.75; g.add(high);
-  var window=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,3.0,32),
+  var win=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,3.0,32),
       mat(0xef5350,{roughness:0.5,transparent:true,opacity:0.16}));
-  g.add(window);
-  /* Края «разреза» — тёмные кольца */
+  g.add(win);
   var rimMat=mat(0x8e0000);
   var rim1=new THREE.Mesh(new THREE.TorusGeometry(1.62,0.07,10,40),rimMat);
   rim1.rotation.x=Math.PI/2; rim1.position.y=-1.5; g.add(rim1);
   var rim2=new THREE.Mesh(new THREE.TorusGeometry(1.62,0.07,10,40),rimMat);
   rim2.rotation.x=Math.PI/2; rim2.position.y=1.5; g.add(rim2);
 
-  /* Клетки крови: 90 эритроцитов, 4 лейкоцита, 8 тромбоцитов */
   for(var i=0;i<90;i++){
     var rbc=buildRBC();
     placeInVessel(rbc,1.25);
@@ -300,7 +366,7 @@ viewCirc.visible=false;
 
 var info=document.getElementById('info');
 var texts={
-  resp:'<b>Дыхание.</b> Гроздь альвеол дышит: расширяется на вдохе и сжимается на выдохе. Голубые молекулы O₂ входят сверху и растворяются в капиллярах, а оранжевые CO₂ и бирюзовые H₂O выходят наружу — так происходит газообмен.',
+  resp:'<b>Дыхание.</b> Всё происходит в правильном порядке: <b>вдох</b> — бронхиолы доставляют воздух, альвеолы раздуваются, голубые молекулы O₂ входят внутрь и переходят в капилляры; короткая <b>пауза</b>; <b>выдох</b> — альвеолы сдуваются, оранжевые CO₂ и бирюзовые H₂O выходят наружу по тем же бронхиолам.',
   circ:'<b>Кровообращение.</b> Внутри артерии виден поток крови: подавляющее большинство клеток — эритроциты (переносят кислород), лейкоцитов и тромбоцитов совсем мало. Клетки движутся в одну сторону, как в реальном сосуде.'
 };
 function setView(t){
@@ -312,8 +378,8 @@ function setView(t){
     btns[i].classList.toggle('active',btns[i].getAttribute('data-t')===t);
   }
   if(t==='resp'){
-    camera.position.set(0,4,15);
-    controls.target.set(0,0.5,0);
+    camera.position.set(0,4,16);
+    controls.target.set(0,1.5,0);
   }else{
     camera.position.set(0,3,14);
     controls.target.set(0,0,0);

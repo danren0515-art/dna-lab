@@ -513,11 +513,15 @@ async function runMitosis(my){
   }));
   if(my!==runToken)return;
   setInfoMito('Анафаза: веретено тянет сестринские хроматиды к полюсам.');
-  chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
-  const sz=chroms.map(ch=>ch.position.z);
-  await tween(1400,p=>chroms.forEach((ch,i)=>{
-    ch.userData.c1.position.set(-2.7,0,sz[i]);
-    ch.userData.c2.position.set(2.7,0,sz[i]);
+   chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
+  const zS=chroms.map(ch=>({a:ch.userData.c1.position.z,b:ch.userData.c2.position.z}));
+  const xS=chroms.map(ch=>ch.position.x);
+  const dx=[-0.5,-0.5,0.5,0.5];
+  await tween(1300,p=>chroms.forEach((ch,i)=>{
+    ch.userData.c1.position.x=xS[i]+dx[i]*p;
+    ch.userData.c2.position.x=xS[i]+dx[i]*p;
+    ch.userData.c1.position.z=zS[i].a+(-2.9-zS[i].a)*p;
+    ch.userData.c2.position.z=zS[i].b+(2.9-zS[i].b)*p;
   }));
   if(my!==runToken)return;
   setInfoMito('Телофаза и цитокинез: образуются два ядра, клетка делится надвое.');

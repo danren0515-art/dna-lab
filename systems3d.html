@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дыхание и кровообращение — 3D</title>
+<style>
+  body{margin:0;overflow:hidden;font-family:Arial,sans-serif;background:#0b1020;color:#fff}
+  #info{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);
+       padding:12px 18px;border-radius:14px;font-size:14px;text-align:center;max-width:96vw;
+       line-height:1.4;z-index:10;white-space:normal}
+  #back{position:fixed;top:10px;left:10px;background:rgba(255,255,255,.15);color:#fff;
+       padding:8px 14px;border-radius:10px;text-decoration:none;z-index:3;font-size:14px}
+  #tabs{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;
+       flex-wrap:wrap;justify-content:center;z-index:2}
+  #tabs button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);
+       border-radius:20px;padding:8px 14px;font-size:14px;cursor:pointer}
+  #tabs button.active{background:#4fc3f7;color:#00243a;font-weight:bold}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">← Назад</a>
+<div id="info"></div>
+<div id="tabs">
+  <button data-t="resp" class="active">🫁 Дыхание</button>
+  <button data-t="circ">❤️ Кровообращение</button>
+</div>
+
+<script>
+window.onerror=function(msg){
+  var el=document.getElementById('info');
+  if(el) el.innerHTML='<span style="color:#ff8787">Ошибка: '+msg+'</span>';
+  return false;
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0b1020);
+var camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,200);
+var renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+document.body.appendChild(renderer.domElement);
+var controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+camera.position.set(0,4,15);
+controls.target.set(0,0.5,0);
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
+var dl=new THREE.DirectionalLight(0xffffff,0.9); dl.position.set(5,8,5); scene.add(dl);
+var dl2=new THREE.DirectionalLight(0x88aaff,0.4); dl2.position.set(-5,-3,-5); scene.add(dl2);
+
+function mat(color,opts){
+  if(!opts){opts={};}
+  opts.color=new THREE.Color(color);
+  return new THREE.MeshStandardMaterial(opts);
+}
+function dot(parent,x,y,z,color,s){
+  if(!s){s=0.12;}
+  var m=new THREE.Mesh(new THREE.SphereGeometry(s,10,10),mat(color,{roughness:0.6}));
+  m.position.set(x,y,z); parent.add(m); return m;
+}
+function makeLabel(text,x,y,z,parent,scale){
+  if(!scale){scale=0.8;}
+  var maxLineW=520;
+  var cv=document.createElement('canvas');
+  var c=cv.getContext('2d');
+  c.font='bold 36px Arial';
+  var words=String(text).split(' ');
+  var lines=[]; var cur='';
+  for(var i=0;i<words.length;i++){
+    var t=cur?cur+' '+words[i]:words[i];
+    if(c.measureText(t).width>maxLineW&&cur){lines.push(cur);cur=words[i];}
+    else{cur=t;}
+  }
+  if(cur){lines.push(cur);}
+  var w=0;
+  for(var i=0;i<lines.length;i++){w=Math.max(w,c.measureText(lines[i]).width);}
+  cv.width=Math.ceil(w+44);
+  cv.height=lines.length*46+28;
+  c=cv.getContext('2d');
+  c.font='bold 36px Arial';
+  c.fillStyle='rgba(8,12,28,0.85)'; c.fillRect(0,0,cv.width,cv.height);
+  c.strokeStyle='rgba(140,170,255,0.8)'; c.lineWidth=3;
+  c.strokeRect(2,2,cv.width-4,cv.height-4);
+  c.fillStyle='#fff'; c.textAlign='center'; c.textBaseline='middle';
+  for(var i=0;i<lines.length;i++){c.fillText(lines[i],cv.width/2,23+i*46);}
+  var sp=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false,depthWrite:false
+  }));
+  var hgt=0.62*scale;
+  sp.scale.set(hgt*cv.width/cv.height,hgt,1);
+  sp.position.set(x,y,z);
+  parent.add(sp);
+  return sp;
+}
+
+/* ================= ВКЛАДКА: ДЫХАНИЕ ================= */
+/* Альвеолы, которые дышат (расширяются-сжимаются),
+   O2 входит сверху, CO2 и H2O выходят снизу вверх */
+var breathClock=0;
+var alveoliGroup=null;
+var mols=[];
+
+function buildRespiration(){
+  var g=new THREE.Group();
+
+  /* Гроздь альвеол: 16 пузырьков вокруг центра */
+  alveoliGroup=new THREE.Group();
+  var alvMat=mat(0xffb3ab,{roughness:0.55,transparent:true,opacity:0.75});
+  for(var i=0;i<16;i++){
+    var r=0.75+Math.random()*0.55;
+    var a=Math.random()*Math.PI*2;
+    var b=Math.random()*Math.PI;
+    var dist=Math.random()*2.1;
+    var alv=new THREE.Mesh(new THREE.SphereGeometry(r,20,20),alvMat);
+    alv.position.set(
+      dist*Math.sin(b)*Math.cos(a),
+      dist*Math.cos(b)*0.7,
+      dist*Math.sin(b)*Math.sin(a)
+    );
+    alveoliGroup.add(alv);
+  }
+  g.add(alveoliGroup);
+
+  /* Капиллярная сеть вокруг альвеол — тонкие красные линии */
+  var capMat=mat(0xe53935);
+  for(var i=0;i<10;i++){
+    var a1=Math.random()*Math.PI*2;
+    var p1=new THREE.Vector3(Math.cos(a1)*2.6,-1.2+Math.random()*2.4,Math.sin(a1)*2.6);
+    var p2=new THREE.Vector3(Math.cos(a1+1.5)*2.6,-1.2+Math.random()*2.4,Math.sin(a1+1.5)*2.6);
+    var len=p1.distanceTo(p2);
+    var seg=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,len,6),capMat);
+    seg.position.copy(p1).addScaledVector(new THREE.Vector3().subVectors(p2,p1),0.5);
+    seg.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3().subVectors(p2,p1).normalize());
+    g.add(seg);
+  }
+  makeLabel('Капилляры — здесь O₂ переходит в кровь, а CO₂ из крови в альвеолы',0,-2.9,0,g,0.9);
+
+  /* Молекулы O2 — голубые, летят сверху вниз (в альвеолы) */
+  for(var i=0;i<14;i++){
+    var o2=dot(g,0,0,0,0x64b5f6,0.13);
+    o2.userData={type:'o2'};
+    respawnO2(o2,true);
+    mols.push(o2);
+  }
+  /* CO2 — оранжевые, H2O — бирюзовые, летят из альвеол вверх */
+  for(var i=0;i<10;i++){
+    var isH2O=(i%2===0);
+    var m=dot(g,0,0,0,isH2O?0x4dd0e1:0xff7043,0.13);
+    m.userData={type:isH2O?'h2o':'co2'};
+    respawnOut(m,true);
+    mols.push(m);
+  }
+
+  makeLabel('O₂ (голубые) — входят в альвеолы',-3.6,4.4,0,g,0.95);
+  makeLabel('CO₂ (оранжевые) и H₂O (бирюзовые) — выходят',3.2,4.4,0,g,0.95);
+  makeLabel('Альвеолы расширяются на вдохе и сжимаются на выдохе',0,-4.0,0,g,0.95);
+  return g;
+}
+function respawnO2(m,anyY){
+  m.position.set((Math.random()-0.5)*3.0, anyY?(Math.random()*6-0.5):5.5+Math.random()*1.5, (Math.random()-0.5)*3.0);
+  m.userData.vy=-1.4-Math.random()*0.5;
+  m.userData.vx=(Math.random()-0.5)*0.4;
+  m.userData.vz=(Math.random()-0.5)*0.4;
+}
+function respawnOut(m,anyY){
+  m.position.set((Math.random()-0.5)*2.6, anyY?(Math.random()*6-2.5):(-0.5+Math.random()*1.5), (Math.random()-0.5)*2.6);
+  m.userData.vy=1.1+Math.random()*0.5;
+  m.userData.vx=(Math.random()-0.5)*0.4;
+  m.userData.vz=(Math.random()-0.5)*0.4;
+}
+function updateRespiration(dt){
+  breathClock+=dt;
+  /* Дыхательный цикл: период 4 секунды */
+  var k=1+0.13*Math.sin(breathClock*Math.PI/2);
+  alveoliGroup.scale.setScalar(k);
+  /* Молекулы */
+  for(var i=0;i<mols.length;i++){
+    var m=mols[i];
+    m.position.x+=m.userData.vx*dt;
+    m.position.y+=m.userData.vy*dt;
+    m.position.z+=m.userData.vz*dt;
+    if(m.userData.type==='o2'){
+      if(m.position.y<-0.6){respawnO2(m,false);}
+    }else{
+      if(m.position.y>5.2){respawnOut(m,false);}
+    }
+  }
+}
+
+/* ============== ВКЛАДКА: КРОВООБРАЩЕНИЕ ============== */
+/* Артерия с прозрачным «окном» посередине,
+   клетки движутся в одну сторону: много эритроцитов,
+   мало лейкоцитов и тромбоцитов */
+var bloodCells=[];
+
+function buildRBC(){
+  /* Двояковогнутый эритроцит */
+  var prof=[
+    new THREE.Vector2(0.0,0.05),
+    new THREE.Vector2(0.18,0.07),
+    new THREE.Vector2(0.32,0.18),
+    new THREE.Vector2(0.44,0.28),
+    new THREE.Vector2(0.48,0.28),
+    new THREE.Vector2(0.50,0.10)
+  ];
+  var g=new THREE.Group();
+  var d1=new THREE.Mesh(new THREE.LatheGeometry(prof,24),mat(0xe53935,{roughness:0.45}));
+  g.add(d1);
+  var d2=new THREE.Mesh(new THREE.LatheGeometry(prof,24),mat(0xc62828,{roughness:0.5}));
+  d2.scale.y=-1; g.add(d2);
+  return g;
+}
+function buildWBC(){
+  var g=new THREE.Group();
+  var body=new THREE.Mesh(new THREE.SphereGeometry(0.42,20,20),
+      mat(0xfaeddc,{roughness:0.5,transparent:true,opacity:0.95}));
+  g.add(body);
+  var nuc=new THREE.Mesh(new THREE.SphereGeometry(0.18,14,14),mat(0x7e57c2));
+  nuc.position.set(0.08,0.06,0); g.add(nuc);
+  return g;
+}
+function buildPLT(){
+  var g=new THREE.Group();
+  var p=new THREE.Mesh(new THREE.SphereGeometry(0.14,14,14),mat(0xce93d8,{roughness:0.55}));
+  p.scale.set(1.5,0.5,1); g.add(p);
+  return g;
+}
+
+function buildCirculation(){
+  var g=new THREE.Group();
+
+  /* Стенки артерии: верх и низ непрозрачные, середина — прозрачное «окно» */
+  var wallMat=mat(0xc62828,{roughness:0.5,transparent:true,opacity:0.85});
+  var low=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,2.5,32),wallMat);
+  low.position.y=-2.75; g.add(low);
+  var high=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,2.5,32),wallMat);
+  high.position.y=2.75; g.add(high);
+  var window=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,3.0,32),
+      mat(0xef5350,{roughness:0.5,transparent:true,opacity:0.16}));
+  g.add(window);
+  /* Края «разреза» — тёмные кольца */
+  var rimMat=mat(0x8e0000);
+  var rim1=new THREE.Mesh(new THREE.TorusGeometry(1.62,0.07,10,40),rimMat);
+  rim1.rotation.x=Math.PI/2; rim1.position.y=-1.5; g.add(rim1);
+  var rim2=new THREE.Mesh(new THREE.TorusGeometry(1.62,0.07,10,40),rimMat);
+  rim2.rotation.x=Math.PI/2; rim2.position.y=1.5; g.add(rim2);
+
+  /* Клетки крови: 90 эритроцитов, 4 лейкоцита, 8 тромбоцитов */
+  for(var i=0;i<90;i++){
+    var rbc=buildRBC();
+    placeInVessel(rbc,1.25);
+    rbc.userData.spin=0.6+Math.random()*1.6;
+    g.add(rbc); bloodCells.push(rbc);
+  }
+  for(var i=0;i<4;i++){
+    var wbc=buildWBC();
+    placeInVessel(wbc,1.05);
+    wbc.userData.spin=0.3;
+    g.add(wbc); bloodCells.push(wbc);
+  }
+  for(var i=0;i<8;i++){
+    var plt=buildPLT();
+    placeInVessel(plt,1.3);
+    plt.userData.spin=1.2;
+    g.add(plt); bloodCells.push(plt);
+  }
+
+  makeLabel('Артерия: «окно» в стенке — видно поток клеток',3.2,3.4,0,g,0.95);
+  makeLabel('Эритроциты — их большинство, переносят O₂',-3.4,2.6,0,g,0.85);
+  makeLabel('Белые шары — лейкоциты (их мало)',-3.4,0.6,0,g,0.8);
+  makeLabel('Лиловые пластинки — тромбоциты (их тоже мало)',3.2,-1.4,0,g,0.85);
+  makeLabel('Клетки движутся в одну сторону — снизу вверх',0,-3.4,0,g,0.9);
+  return g;
+}
+function placeInVessel(mesh,maxR){
+  var a=Math.random()*Math.PI*2;
+  var r=Math.random()*maxR;
+  mesh.position.set(Math.cos(a)*r,-4.5+Math.random()*9,Math.sin(a)*r);
+  mesh.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,Math.random()*Math.PI);
+}
+function updateCirculation(dt){
+  for(var i=0;i<bloodCells.length;i++){
+    var c=bloodCells[i];
+    c.position.y+=2.2*dt;
+    c.rotation.x+=c.userData.spin*dt;
+    c.rotation.z+=c.userData.spin*0.4*dt;
+    if(c.position.y>4.6){c.position.y=-4.6;}
+  }
+}
+
+/* ================= ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ================= */
+var viewResp=buildRespiration();
+var viewCirc=buildCirculation();
+scene.add(viewResp);
+scene.add(viewCirc);
+viewCirc.visible=false;
+
+var info=document.getElementById('info');
+var texts={
+  resp:'<b>Дыхание.</b> Гроздь альвеол дышит: расширяется на вдохе и сжимается на выдохе. Голубые молекулы O₂ входят сверху и растворяются в капиллярах, а оранжевые CO₂ и бирюзовые H₂O выходят наружу — так происходит газообмен.',
+  circ:'<b>Кровообращение.</b> Внутри артерии виден поток крови: подавляющее большинство клеток — эритроциты (переносят кислород), лейкоцитов и тромбоцитов совсем мало. Клетки движутся в одну сторону, как в реальном сосуде.'
+};
+function setView(t){
+  viewResp.visible=(t==='resp');
+  viewCirc.visible=(t==='circ');
+  info.innerHTML=texts[t];
+  var btns=document.querySelectorAll('#tabs button');
+  for(var i=0;i<btns.length;i++){
+    btns[i].classList.toggle('active',btns[i].getAttribute('data-t')===t);
+  }
+  if(t==='resp'){
+    camera.position.set(0,4,15);
+    controls.target.set(0,0.5,0);
+  }else{
+    camera.position.set(0,3,14);
+    controls.target.set(0,0,0);
+  }
+}
+var tabBtns=document.querySelectorAll('#tabs button');
+for(var i=0;i<tabBtns.length;i++){
+  (function(btn){
+    btn.onclick=function(){ setView(btn.getAttribute('data-t')); };
+  })(tabBtns[i]);
+}
+
+addEventListener('resize',function(){
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+var clock=new THREE.Clock();
+(function loop(){
+  requestAnimationFrame(loop);
+  var dt=Math.min(clock.getDelta(),0.05);
+  if(viewResp.visible){updateRespiration(dt);}
+  if(viewCirc.visible){updateCirculation(dt);}
+  controls.update();
+  renderer.render(scene,camera);
+})();
+
+setView('resp');
+</script>
+</body>
+</html>

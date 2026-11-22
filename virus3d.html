@@ -78,7 +78,7 @@ function makeLabel(text,x,y,z,parent,scale){
   var c=cv.getContext('2d');
   c.font='bold 36px Arial';
   var words=String(text).split(' ');
-  var lines=[],cur='';
+  var lines=,cur='';
   for(var i=0;i<words.length;i++){
     var t=cur?cur+' '+words[i]:words[i];
     if(c.measureText(t).width>maxLineW&&cur){lines.push(cur);cur=words[i];}
@@ -106,9 +106,6 @@ function makeLabel(text,x,y,z,parent,scale){
   return sp;
 }
 
-/* ---------- МОДЕЛЬ ФАГА ----------
-   Головка в точке (0,0,0) локально, хвост идёт вниз до y=-2.45.
-   Кончик хвоста касается клетки, когда центр головки на y=CELL_TOP+2.45. */
 function buildVirus(s,withLabels){
   if(!s) s=1;
   var g=new THREE.Group();
@@ -147,7 +144,6 @@ function buildVirus(s,withLabels){
   return g;
 }
 
-/* ---------- МОДЕЛЬ БАКТЕРИИ ---------- */
 var CELL_R=3, CELL_TOP=CELL_R;
 function buildBacterium(){
   var g=new THREE.Group();
@@ -173,7 +169,7 @@ function buildBacterium(){
 var info=document.getElementById('info');
 var goBtn=document.getElementById('goBtn');
 var runToken=0;
-var virus=null,bact=null,vDna=null,offspring=[],extra=[];
+var virus=null,bact=null,vDna=null,offspring=,extra=;
 
 function tw(dur,fn,my){
   return new Promise(function(res){
@@ -189,8 +185,8 @@ function tw(dur,fn,my){
 var wait=ms=>tw(ms,()=>{});
 
 function clearDynamic(){
-  offspring.forEach(o=>scene.remove(o)); offspring=[];
-  extra.forEach(o=>scene.remove(o)); extra=[];
+  offspring.forEach(o=>scene.remove(o)); offspring=;
+  extra.forEach(o=>scene.remove(o)); extra=;
   if(virus)scene.remove(virus);
   if(bact)scene.remove(bact);
   if(vDna)scene.remove(vDna);
@@ -208,7 +204,6 @@ function resetScene(){
   info.innerHTML='Это <b>бактериофаг</b> — вирус, заражающий бактерию. Вращай сцену мышью, колесом приближай. Нажми зелёную кнопку — увидишь весь цикл заражения по шагам.';
 }
 
-/* Куда разлетаются потомки: наружу и чуть вверх, чтобы не уходить «в пол» */
 function flyDirection(from){
   var d=new THREE.Vector3(from.x,0.4+Math.random()*1.2,from.z).normalize();
   if(d.length()<0.1)d=new THREE.Vector3(0,1,0);
@@ -216,16 +211,15 @@ function flyDirection(from){
 }
 
 async function runCycle(my){
-  /* ---------- СТАДИЯ 1: ПРИКРЕПЛЕНИЕ ---------- */
+  /* СТАДИЯ 1: ПРИКРЕПЛЕНИЕ */
   info.innerHTML='<b>Стадия 1. Прикрепление.</b> Фаг подлетает к бактерии и «садится» на неё: хвостовые волокна находят на поверхности клетки специальные белки-рецепторы и сцепляются с ними. Жёлтая вспышка — место контакта.';
   var p0=virus.position.clone();
-  var dock=new THREE.Vector3(0,CELL_TOP+2.45,0); /* кончик хвоста точно на поверхности клетки */
+  var dock=new THREE.Vector3(0,CELL_TOP+2.45,0);
   await tw(1600,p=>{
     virus.position.lerpVectors(p0,dock,p);
     virus.rotation.z=-0.3*(1-p);
   });
   if(my!==runToken)return;
-  /* вспышка контакта */
   var flash=new THREE.Mesh(new THREE.SphereGeometry(0.5,20,20),
       matStd(0xffca28,{transparent:true,opacity:.9}));
   flash.position.set(0,CELL_TOP,0); scene.add(flash); extra.push(flash);
@@ -237,11 +231,11 @@ async function runCycle(my){
   scene.remove(flash);
   await wait(400); if(my!==runToken)return;
 
-  /* ---------- СТАДИЯ 2: ВПРЫСК ДНК ---------- */
+  /* СТАДИЯ 2: ВПРЫСК ДНК */
   info.innerHTML='<b>Стадия 2. Впрыск ДНК.</b> Ножка сокращается и прокалывает клеточную стенку. Зелёные бусины — ДНК вируса — по капле уходят внутрь клетки. Снаружи остаётся ПУСТОЙ капсид: он стал серым.';
   await tw(450,p=>virus.position.y=dock.y-0.55*p);
   if(my!==runToken)return;
-  var tip=new THREE.Vector3(0,CELL_TOP+2.45-0.55-2.45,0); /* кончик хвоста после укола */
+  var tip=new THREE.Vector3(0,CELL_TOP+2.45-0.55-2.45,0);
   for(var i=0;i<14;i++){
     if(my!==runToken)return;
     var from=tip.clone().add(new THREE.Vector3((Math.random()-.5)*0.2,0,(Math.random()-.5)*0.2));
@@ -251,13 +245,11 @@ async function runCycle(my){
     await wait(95);
   }
   if(my!==runToken)return;
-  /* ДНК в головке исчезает, капсид «пустеет» (серый) */
   await tw(500,p=>{
     virus.userData.dnaIn.children.forEach(c=>c.scale.setScalar(Math.max(0.01,1-p)));
     virus.userData.head.material.color.setRGB(0.56+0.1*p,0.64+0.05*p,0.68+0.05*p);
   });
   if(my!==runToken)return;
-  /* внутри клетки растёт вирусная ДНК */
   vDna=new THREE.Group();
   for(var i=0;i<30;i++){
     var a=Math.random()*Math.PI*2, b=Math.random()*Math.PI;
@@ -269,7 +261,7 @@ async function runCycle(my){
   if(my!==runToken)return;
   await wait(500); if(my!==runToken)return;
 
-  /* ---------- СТАДИЯ 3: СБОРКА НОВЫХ ФАГОВ ---------- */
+  /* СТАДИЯ 3: СБОРКА НОВЫХ ФАГОВ */
   info.innerHTML='<b>Стадия 3. Сборка потомства.</b> Клетка перехвачена: её рибосомы теперь работают на вирус и собирают детали новых фагов по «чертежам» вирусной ДНК. Внутри один за другим появляются готовые вирусы.';
   for(var i=0;i<12;i++){
     if(my!==runToken)return;
@@ -286,7 +278,7 @@ async function runCycle(my){
   if(my!==runToken)return;
   await wait(900); if(my!==runToken)return;
 
-  /* ---------- СТАДИЯ 4: ЛИЗИС — КЛЕТКА ЛОПАЕТСЯ ---------- */
+  /* СТАДИЯ 4: ЛИЗИС — КЛЕТКА ЛОПАЕТСЯ */
   info.innerHTML='<b>Стадия 4. Лизис.</b> Вирусный фермент разрушает стенку изнутри — клетка лопается! Все готовые фаги выходят наружу. Каждый из них может заразить новую бактерию — цикл повторяется.';
   var explosion=new THREE.Mesh(new THREE.SphereGeometry(CELL_R,32,32),
       matStd(0xff7043,{transparent:true,opacity:.35}));
@@ -304,7 +296,6 @@ async function runCycle(my){
     offspring.forEach((m,i)=>m.position.lerpVectors(starts[i],ends[i],p));
   });
   if(my!==runToken)return;
-  /* пустой капсид и мёртвая клетка больше не нужны */
   scene.remove(virus); virus=null;
   scene.remove(bact); bact=null;
   scene.remove(vDna); vDna=null;

@@ -210,9 +210,6 @@ function addCyl(parent,a,b,r,color){
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
   parent.add(m);return m;}
 
-/* ПОЛНАЯ очистка: со сцены удаляется всё, кроме источников света.
-   Зависшие анимации разрешаются, чтобы асинхронные функции спокойно
-   дошли до проверки токена и завершились. */
 function clearAll(){
   sceneVer++;
   tweens.slice().forEach(t=>t.res());tweens.length=0;
@@ -333,8 +330,6 @@ async function transcribe(my){
   if(my!==runToken)return;
   await wait(400);if(my!==runToken)return;
   setInfoDna('мРНК готова — «отпочковывается» от ДНК и выстраивается в линию');
-  /* ГЛАВНОЕ ИСПРАВЛЕНИЕ: убираем соединительные цилиндры, которые
-     держали форму спирали — именно они оставались на фоне */
   helixConns.forEach(c=>mrnaGroup.remove(c));helixConns=[];
   const mats=[];dnaGroup.traverse(o=>{if(o.material){o.material.transparent=true;mats.push(o.material);}});
   const starts=mrnaMeshes.map(m=>m.position.clone());
@@ -513,11 +508,11 @@ async function runMitosis(my){
   }));
   if(my!==runToken)return;
   setInfoMito('Анафаза: веретено тянет сестринские хроматиды к полюсам.');
-     chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
-  const zS=chroms.map(ch=>({a:ch.userData.c1.position.z,b:ch.userData.c2.position.z}));
-  await tween(1300,p=>chroms.forEach((ch,i)=>{
-    ch.userData.c1.position.z=zS[i].a+(-2.9-zS[i].a)*p;
-    ch.userData.c2.position.z=zS[i].b+(2.9-zS[i].b)*p;
+  chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
+  const sz=chroms.map(ch=>ch.position.z);
+  await tween(1400,p=>chroms.forEach((ch,i)=>{
+    ch.userData.c1.position.set(-2.7,0,sz[i]);
+    ch.userData.c2.position.set(2.7,0,sz[i]);
   }));
   if(my!==runToken)return;
   setInfoMito('Телофаза и цитокинез: образуются два ядра, клетка делится надвое.');
@@ -602,7 +597,7 @@ async function runMeiosis(my){
     });});
   await wait(300);if(my!==runToken)return;
   setInfoMito('Анафаза II: сестринские хроматиды расходятся — всего образуется 4 клетки.');
- chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
+  chroms.forEach(ch=>{scene.attach(ch.userData.c1);scene.attach(ch.userData.c2);});
   const zS=chroms.map(ch=>({a:ch.userData.c1.position.z,b:ch.userData.c2.position.z}));
   const xS=chroms.map(ch=>ch.position.x);
   const dx=[-0.5,-0.5,0.5,0.5];
@@ -826,5 +821,3 @@ if ('serviceWorker' in navigator)
 
 </body>
 </html>
-
-

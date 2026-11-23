@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Теория: Биология</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --accent: #38bdf8;
+    --text: #f1f5f9;
+    --sec: #94a3b8;
+    --card: #1e293b;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    background: var(--panel);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+  }
+  .logo { font-weight: bold; color: var(--accent); }
+  nav a {
+    color: var(--sec);
+    text-decoration: none;
+    margin-left: 20px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+  }
+  nav a.active, nav a:hover {
+    color: var(--text);
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+  }
+  main {
+    flex: 1;
+    padding: 30px;
+    max-width: 1000px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  h1, h2, h3 { color: var(--accent); border-left: 4px solid var(--accent); padding-left: 10px; }
+  .section { display: none; animation: fadeIn 0.5s ease; }
+  .section.active { display: block; }
+  .card {
+    background: var(--card);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  }
+  .term { font-weight: bold; color: var(--accent); }
+  .bullet-list { list-style: none; padding: 0; }
+  .bullet-list li::before { content: "•"; color: var(--accent); font-weight: bold; margin-right: 8px; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 768px) {
+    nav { flex-direction: column; align-items: stretch; gap: 10px; }
+    nav a { margin: 0; border: 1px solid #334155; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">🧬 BioEdu: Теория</span>
+  <nav>
+    <a onclick="showTab('virology')" class="active">Вирусология</a>
+    <a onclick="showTab('genetics')">Генетика</a>
+    <a onclick="showTab('cell_theory')">Клеточная теория</a>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ВИРУСОЛОГИЯ -->
+  <div id="virology" class="section active">
+    <h2>Вирусология</h2>
+    <div class="card">
+      <h3>Что такое вирус?</h3>
+      <p>Вирус — неклеточная форма жизни. Он проявляет свойства живого <b>только внутри клетки-хозяина</b>. Вне клетки вирус существует в виде вириона (инертная частица).</p>
+      <h3>Строение вириона</h3>
+      <ul class="bullet-list">
+        <li><b>Генетический материал:</b> ДНК <i>или</i> РНК (одно- или двуцепочечная).</li>
+        <li><b>Капсид:</b> белковая оболочка, защищающая геном.</li>
+        <li><b>Суперкапсид (у некоторых):</b> липидная мембрана, «украденная» у клетки-хозяина при выходе.</li>
+      </ul>
+      <h3>Жизненный цикл (на примере бактериофага)</h3>
+      <ol>
+        <li><b>Адсорбция:</b> вирус прикрепляется к рецепторам на поверхности клетки.</li>
+        <li><b>Проникновение:</b> впрыскивание нуклеиновой кислоты в клетку (или эндоцитоз).</li>
+        <li><b>Синтез:</b> клетка перестает работать на себя и начинает производить копии вируса.</li>
+        <li><b>Сборка:</b> новые вирионы собираются из синтезированных компонентов.</li>
+        <li><b>Выход:</b> клетка лопается (лизис) или вирусы отпочковываются, истощая клетку.</li>
+      </ol>
+      <h3>Примеры</h3>
+      <p><b>ВИЧ:</b> РНК-вирус, поражает иммунные клетки. <b>Грипп:</b> РНК-вирус с высокой изменчивостью. <b>Бактериофаг Т4:</b> классический объект молекулярной биологии.</p>
+    </div>
+  </div>
+
+  <!-- ГЕНЕТИКА -->
+  <div id="genetics" class="section">
+    <h2>Генетика</h2>
+    
+    <div class="card">
+      <h3>Процессы с ДНК</h3>
+      <p>ДНК — матрица для хранения и передачи информации. Основные процессы:</p>
+      <ul class="bullet-list">
+        <li><b>Репликация:</b> удвоение ДНК перед делением клетки. Происходит по полуконсервативному принципу (каждая новая молекула содержит одну старую и одну новую цепь). Фермент: <i>ДНК-полимераза</i>.</li>
+        <li><b>Транскрипция:</b> синтез РНК на матрице ДНК. Фермент: <i>РНК-полимераза</i>. Это первый этап реализации генетической информации.</li>
+        <li><b>Репарация:</b> исправление ошибок и повреждений ДНК. Критически важна для предотвращения мутаций.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Закономерности наследственности и изменчивости</h3>
+      <p><b>Наследственность</b> — способность организмов передавать признаки потомкам. <b>Изменчивость</b> — способность приобретать новые признаки.</p>
+      <h4>Типы изменчивости</h4>
+      <ul class="bullet-list">
+        <li><b>Наследственная (генотипическая):</b> затрагивает ДНК и передается по наследству.</li>
+        <li><b>Ненаследственная (фенотипическая/модификационная):</b> изменения под действием среды (например, загар), ДНК не меняется.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Мутации</h3>
+      <p>Мутации — это стойкие изменения генетического материала.</p>
+      <h4>Классификация мутаций</h4>
+      <ul class="bullet-list">
+        <li><b>Генные:</b> изменение последовательности нуклеотидов в гене (замена, вставка, выпадение). Пример: серповидноклеточная анемия.</li>
+        <li><b>Хромосомные:</b> изменение структуры хромосом (делеция, дупликация, инверсия, транслокация).</li>
+        <li><b>Геномные:</b> изменение числа хромосом (полиплоидия, анеуплоидия). Пример: синдром Дауна (трисомия по 21-й паре).</li>
+      </ul>
+      <p><b>Мутагены:</b> факторы, вызывающие мутации (УФ-излучение, радиация, химические вещества, вирусы).</p>
+    </div>
+  </div>
+
+  <!-- КЛЕТОЧНАЯ ТЕОРИЯ -->
+  <div id="cell_theory" class="section">
+    <h2>Клеточная теория и строение клеток</h2>
+    
+    <div class="card">
+      <h3>Основные положения клеточной теории</h3>
+      <ul class="bullet-list">
+        <li>Клетка — элементарная единица строения, жизнедеятельности и развития всех живых организмов.</li>
+        <li>Клетки всех организмов гомологичны (сходны по строению и химическому составу).</li>
+        <li>Новые клетки образуются только путем деления исходной (материнской) клетки.</li>
+        <li>Многоклеточный организм — это сложная система взаимодействующих клеток.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Клетки по царствам</h3>
+      <h4>Бактерии (Прокариоты)</h4>
+      <p>Нет ядра. ДНК кольцевая, лежит прямо в цитоплазме (нуклеоид). Нет мембранных органоидов. Есть клеточная стенка (муреин). Мелкие рибосомы (70S). Пример: кишечная палочка.</p>
+      
+      <h4>Растения (Эукариоты)</h4>
+      <p>Есть ядро и мембранные органоиды. <b>Специфично:</b> клеточная стенка (целлюлоза), крупная вакуоль с клеточным соком, пластиды (хлоропласты для фотосинтеза). Запасное вещество — крахмал.</p>
+      
+      <h4>Грибы (Эукариоты)</h4>
+      <p>Есть ядро. <b>Специфично:</b> клеточная стенка (хитин), нет пластид. Гетеротрофы (питаются готовыми органическими веществами). Запасное вещество — гликоген. По строению близки к животным.</p>
+      
+      <h4>Животные (Эукариоты)</h4>
+      <p>Есть ядро. <b>Специфично:</b> нет клеточной стенки (есть гибкая мембрана), нет пластид. Есть центриоли (участвуют в делении). Запасное вещество — гликоген. Гетеротрофы.</p>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  function showTab(tabName) {
+    // Скрыть все секции
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(sec => sec.classList.remove('active'));
+    
+    // Убрать активный класс у кнопок
+    const links = document.querySelectorAll('nav a');
+    links.forEach(link => link.classList.remove('active'));
+    
+    // Показать нужную секцию
+    document.getElementById(tabName).classList.add('active');
+    
+    // Подсветить кнопку (находим по onclick атрибуту)
+    const activeLink = Array.from(links).find(l => l.getAttribute('onclick').includes(tabName));
+    if(activeLink) activeLink.classList.add('active');
+  }
+</script>
+
+</body>
+</html>

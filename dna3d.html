@@ -43,8 +43,8 @@ h1{color:var(--accent);font-size:22px;text-align:center}
 </div>
 <div class="legend">
 <b>Обозначения:</b> шарики — азотистые основания: <span class="dot dot-A"></span>А <span class="dot dot-T"></span>Т <span class="dot dot-G"></span>Г <span class="dot dot-C"></span>Ц.
-Серые перемычки — водородные связи между старыми цепями. <span class="dot dot-new"></span>Розовые связи — новосинтезированная цепь: она достраивается по правилу комплементарности (А-Т, Г-Ц).<br>
-Вращение — левой кнопкой мыши, зум — колёсиком.
+Серые перемычки — водородные связи между старыми цепями. <span class="dot dot-new"></span>Розовые связи — новосинтезированная цепь. В конце анимации новые цепи «щёлкнут» на место, образуя две идеальные спирали.
+<br>Вращение — левой кнопкой мыши, зум — колёсиком.
 </div>
 </main>
 <script>
@@ -72,7 +72,7 @@ var RISE = 0.9;             // шаг по высоте на одну пару
 var TWIST = 0.62;           // угол закрутки на одну пару
 var Z0 = -N * RISE / 2;
 var SEP = 5;                // расхождение цепей при репликации
-var NEWOFF = 1.8;           // отступ новой цепи от старой
+var NEWOFF = 1.8;           // отступ новой цепи от старой (в процессе)
 
 var SEQ = "ATGC".repeat(11); // 44 основания
 var BASE_COLORS = {A:0xff5252, T:0x4fc3f7, G:0x69f0ae, C:0xffd54f};
@@ -114,8 +114,9 @@ function setCyl(mesh, p1, p2){
 }
 
 // строим все объекты
-var backA = [], backB = [], rung = [], segA = [], segB = [];
-var newA = [], newB = [], linkA = [], linkB = [], newSegA = [], newSegB = [];
+var backA = , backB = , rung = , segA = , segB = ;
+var newA = , newB = , linkA = , linkB = , newSegA = , newSegB = ;
+var finalRungA = , finalRungB = ; // перемычки для финальных спиралей
 
 for(var i = 0; i < N; i++){
   var b = SEQ[i];
@@ -126,6 +127,8 @@ for(var i = 0; i < N; i++){
   newB.push(addSphere(geoSmall, BASE_COLORS[b]));
   linkA.push(addCyl(geoThin, matPink));
   linkB.push(addCyl(geoThin, matPink));
+  finalRungA.push(addCyl(geoCyl, matPink)); // финальные перемычки (розовые)
+  finalRungB.push(addCyl(geoCyl, matPink));
 }
 for(var i = 0; i < N - 1; i++){
   segA.push(addCyl(geoCyl, matGrey));
@@ -148,38 +151,92 @@ function posB(i, sep){
   return new THREE.Vector3(-p.x, -p.y, p.z);
 }
 
+// Позиции для финальных спиралей (чтобы новые цепи встали ровно)
+function finalPosA(i){
+  var a = i * TWIST;
+  return new THREE.Vector3(R * Math.cos(a), R * Math.sin(a), Z0 + i * RISE);
+}
+function finalPosB(i){
+  var p = finalPosA(i);
+  return new THREE.Vector3(-p.x, -p.y, p.z);
+}
+
 function updateScene(){
   var forkIdx = Math.floor(rp * N);
   var synthIdx = forkIdx - 2; // синтез чуть отстаёт от вилки
+  
+  // Флаг: если репликация завершена (rp >= 1), показываем финальные спирали
+  var isFinal = (rp >= 1);
+
   for(var i = 0; i < N; i++){
+    // 1. Позиции старых цепей
     var sep = (i < forkIdx) ? Math.min(1, (forkIdx - i) / 6) : 0;
     var pA = posA(i, sep);
     var pB = posB(i, sep);
+    
+    // Если финал, старые цепи остаются на своих местах (они уже часть новых спиралей)
+    if(isFinal) {
+      pA = finalPosA(i);
+      pB = finalPosB(i);
+    }
+    
     backA[i].position.copy(pA);
     backB[i].position.copy(pB);
 
-    // перемычка между старыми цепями — только в нерасплетённой части
-    if(i >= forkIdx){ rung[i].visible = true; setCyl(rung[i], pA, pB); }
+    // 2. Перемычки между старыми цепями (исчезают при расплетении)
+    if(i >= forkIdx && !isFinal){ rung[i].visible = true; setCyl(rung[i], pA, pB); }
     else { rung[i].visible = false; }
 
+    // 3. Новые цепи и их связи (в процессе)
     var synth = (i <= synthIdx) ? 1 : 0;
-    newA[i].visible = synth === 1;
-    newB[i].visible = synth === 1;
-    linkA[i].visible = synth === 1;
-    linkB[i].visible = synth === 1;
-    if(synth){
-      var nA = pA.clone(); nA.x -= NEWOFF;
-      var nB = pB.clone(); nB.x += NEWOFF;
+    var isNewVisible = synth === 1;
+    
+    // Если финал, новые цепи становятся частью спирали и всегда видны
+    if(isFinal) isNewVisible = true;
+
+    newA[i].visible = isNewVisible;
+    newB[i].visible = isNewVisible;
+    linkA[i].visible = isNewVisible;
+    linkB[i].visible = isNewVisible;
+
+    if(isNewVisible){
+      var nA, nB;
+      if(isFinal){
+        // В финале новые цепи встают ровно в спираль
+        nA = finalPosA(i);
+        nB = finalPosB(i);
+        // Рисуем финальные перемычки между старой и новой цепью
+        finalRungA[i].visible = true;
+        finalRungB[i].visible = true;
+        setCyl(finalRungA[i], backA[i].position, nA);
+        setCyl(finalRungB[i], backB[i].position, nB);
+      } else {
+        // В процессе новые цепи висят сбоку
+        nA = pA.clone(); nA.x -= NEWOFF;
+        nB = pB.clone(); nB.x += NEWOFF;
+        finalRungA[i].visible = false;
+        finalRungB[i].visible = false;
+      }
       newA[i].position.copy(nA);
       newB[i].position.copy(nB);
       setCyl(linkA[i], pA, nA);
       setCyl(linkB[i], pB, nB);
+    } else {
+      finalRungA[i].visible = false;
+      finalRungB[i].visible = false;
     }
   }
+
+  // 4. Скелетные связи (остов ДНК)
   for(var i = 0; i < N - 1; i++){
+    // Старые цепи
     setCyl(segA[i], backA[i].position, backA[i+1].position);
     setCyl(segB[i], backB[i].position, backB[i+1].position);
+    
+    // Новые цепи
     var s = (i <= synthIdx - 1) ? 1 : 0;
+    if(isFinal) s = 1; // В финале все связи новой цепи видны
+    
     newSegA[i].visible = s === 1;
     newSegB[i].visible = s === 1;
     if(s){
@@ -193,7 +250,7 @@ function phaseText(){
   if(rp <= 0) return 'Двойная спираль готова к репликации. Нажми «Запустить».';
   if(rp < 0.5) return 'Хеликаза расплетает спираль — образуется репликационная вилка.';
   if(rp < 1) return 'ДНК-полимераза достраивает новые цепи (5\u2019\u21923\u2019).';
-  return 'Готово! Образовались две молекулы ДНК — полуконсервативный механизм.';
+  return 'Готово! Образовались две идентичные двойные спирали (полуконсервативный механизм).';
 }
 
 var clock = new THREE.Clock();

@@ -1,146 +1,264 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Аминокислоты: схемы и описание</title>
-<style>
-:root{--bg:#050510;--panel:#111122;--accent:#4fc3f7;--text:#e0e0e0;--sec:#a0a0b0;}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
-header{position:sticky;top:0;background:var(--panel);border-bottom:1px solid #333;padding:12px 20px;z-index:100;display:flex;justify-content:space-between;align-items:center}
-.logo{font-weight:bold;color:var(--accent);letter-spacing:1px}
-.back{padding:8px 16px;border:1px solid #444;border-radius:20px;color:var(--text);text-decoration:none;font-size:14px}
-.back:hover{background:var(--accent);color:#000}
-main{flex:1;max-width:950px;margin:0 auto;width:100%;padding:20px;display:flex;flex-direction:column;align-items:center}
-h1{color:var(--accent);font-size:22px}
-.card{display:flex;gap:24px;background:rgba(255,255,255,.04);border:1px solid #2a2a3d;border-radius:14px;padding:24px;max-width:900px;width:100%;flex-wrap:wrap;justify-content:center}
-.img-wrap{background:#fff;border-radius:10px;padding:10px;display:flex;align-items:center;justify-content:center;min-width:280px}
-.img-wrap img{max-width:300px;max-height:340px;display:block}
-.img-cap{font-size:11px;color:#555;text-align:center;margin-top:4px}
-.info-side{flex:1;min-width:260px;max-width:480px}
-.amino-name{font-size:26px;color:var(--accent);font-weight:bold}
-.amino-cat{margin-top:6px;color:#ffb74d;font-size:12px;text-transform:uppercase;letter-spacing:1px}
-.formula-row{margin:12px 0;font-family:'Courier New',monospace;background:#000;border:1px solid #333;border-radius:6px;padding:8px 12px;display:inline-block}
-.amino-desc{color:var(--sec);font-size:14px;line-height:1.65;margin-top:10px}
-.codon{color:var(--accent);font-family:monospace}
-.counter{color:var(--sec);font-size:14px;margin:14px 0 6px}
-.dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:700px;margin-bottom:14px}
-.dot{width:10px;height:10px;border-radius:50%;background:#2a2a3d;cursor:pointer;border:none;padding:0}
-.dot.active{background:var(--accent)}
-.dot.cat1.active{background:#e57373}.dot.cat2.active{background:#4fc3f7}.dot.cat3.active{background:#ffb74d}.dot.cat4.active{background:#ba68c8}
-.controls{display:flex;gap:16px}
-.nav-btn{padding:12px 26px;border:1px solid rgba(79,195,247,.4);background:rgba(255,255,255,.05);color:var(--accent);cursor:pointer;border-radius:8px;font-size:15px;font-weight:bold;transition:.2s}
-.nav-btn:hover{background:var(--accent);color:#000}
-.nav-btn:disabled{opacity:.25;cursor:not-allowed}
-.legend{background:rgba(255,255,255,.05);border-left:4px solid var(--accent);padding:14px;border-radius:8px;max-width:750px;color:var(--sec);font-size:13px;margin-top:20px;text-align:center}
-.legend b{color:var(--accent)}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аминокислоты: 3D-просмотр</title>
+    <style>
+        :root {
+            --bg-color: #050510;
+            --panel-bg: #111122;
+            --accent: #4fc3f7;
+            --text-main: #e0e0e0;
+            --text-sec: #a0a0b0;
+            --card-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            background: var(--panel-bg);
+            border-bottom: 1px solid #333;
+            padding: 1rem;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .back-btn {
+            padding: 8px 16px;
+            border: 1px solid #444;
+            background: transparent;
+            color: var(--text-sec);
+            cursor: pointer;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: var(--accent);
+            color: #000;
+        }
+
+        main {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 2rem;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--accent);
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Контейнер для 3D-сцены (имитация) */
+        .scene-container {
+            width: 400px;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin-bottom: 2rem;
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.1);
+        }
+
+        /* Здесь будет 3D-модель (заглушка с названием и формулой) */
+        .amino-3d-placeholder {
+            text-align: center;
+            color: var(--text-sec);
+        }
+
+        .amino-name {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .amino-formula {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: #fff;
+            background: #000;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .amino-category {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: var(--text-sec);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Панель управления (стрелки) */
+        .controls {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            border: none;
+            background: var(--card-bg);
+            color: var(--accent);
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.2s;
+            border: 1px solid rgba(79, 195, 247, 0.3);
+        }
+
+        .nav-btn:hover {
+            background: var(--accent);
+            color: #000;
+            transform: scale(1.05);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Инфо-блок под сценой */
+        .info-block {
+            background: var(--card-bg);
+            border-left: 4px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 8px;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .info-block p {
+            margin: 0;
+            color: var(--text-sec);
+            line-height: 1.6;
+        }
+
+        .info-block b {
+            color: var(--accent);
+        }
+    </style>
 </head>
 <body>
-<header>
-<span class="logo">🧬 Аминокислоты</span>
-<a class="back" href="index.html">← К моделям</a>
-</header>
-<main>
-<h1>Строение 20 аминокислот</h1>
+    <header>
+        <span class="logo">🧬 Аминокислоты</span>
+        <a class="back-btn" href="index.html">← К моделям</a>
+    </header>
 
-<div class="counter" id="counter">1 из 20</div>
-<div class="dots" id="dots"></div>
+    <main>
+        <h1>3D-просмотр аминокислот</h1>
 
-<div class="card">
-<div class="img-wrap">
-<div>
-<img id="struct-img" src="" alt="Структурная формула">
-<div class="img-cap">Структурная формула (PubChem)</div>
-</div>
-</div>
-<div class="info-side">
-<div class="amino-name" id="amino-name"></div>
-<div class="amino-cat" id="amino-cat"></div>
-<div class="formula-row" id="amino-formula"></div>
-<div class="amino-desc" id="amino-desc"></div>
-</div>
-</div>
+        <div class="scene-container">
+            <div class="amino-3d-placeholder">
+                <div class="amino-name" id="amino-name">Аланин</div>
+                <div class="amino-formula" id="amino-formula">H₂N-CH(CH₃)-COOH</div>
+                <div class="amino-category" id="amino-category">Неполярная (гидрофобная)</div>
+            </div>
+        </div>
 
-<div class="controls" style="margin-top:18px">
-<button class="nav-btn" id="prev" onclick="change(-1)">← Назад</button>
-<button class="nav-btn" id="next" onclick="change(1)">Вперёд →</button>
-</div>
+        <div class="controls">
+            <button class="nav-btn" id="prev-btn" onclick="changeAmino(-1)">← Назад</button>
+            <button class="nav-btn" id="next-btn" onclick="changeAmino(1)">Вперёд →</button>
+        </div>
 
-<div class="legend">
-<b>Как читать схему:</b> голубая коробочка — аминогруппа H<sub>2</sub>N, розовая — карбоксильная группа COOH (они есть у всех аминокислот), жёлтая — боковая цепь R, по которой аминокислоты и различаются. Цвет точек внизу означает группу: <span style="color:#e57373">неполярные</span>, <span style="color:#4fc3f7">полярные</span>, <span style="color:#ffb74d">основные</span>, <span style="color:#ba68c8">кислые</span>.
-</div>
-</main>
+        <div class="info-block">
+            <p>
+                <b>Аминокислоты</b> — мономеры белков. Каждая содержит аминогруппу (–NH₂) и карбоксильную группу (–COOH), а также уникальную боковую цепь (R-группу), определяющую свойства. 
+                <br><br>
+                В белках участвуют <b>20 стандартных аминокислот</b>, которые делятся на неполярные, полярные, кислые и основные.
+            </p>
+        </div>
+    </main>
 
-<script>
-var aminoAcids = [
-{name:"Аланин", cid:5950, formula:"C₃H₇NO₂", cat:"Неполярная (гидрофобная)", group:1, desc:"Боковая цепь — метил (-CH₃). Самая простая после глицина. Заменимая.", codon:"GCU / GCC / GCA / GCG"},
-{name:"Валин", cid:6287, formula:"C₅H₁₁NO₂", cat:"Неполярная (гидрофобная)", group:1, desc:"Боковая цепь — разветвлённая группа CH(CH₃)₂. Незаменимая.", codon:"GUU / GUC / GUA / GUG"},
-{name:"Лейцин", cid:6106, formula:"C₆H₁₃NO₂", cat:"Неполярная (гидрофобная)", group:1, desc:"Самая частая аминокислота в белках. Боковая цепь — CH₂CH(CH₃)₂. Незаменимая.", codon:"UUA / UUG / CUU-CUG"},
-{name:"Изолейцин", cid:6306, formula:"C₆H₁₃NO₂", cat:"Неполярная (гидрофобная)", group:1, desc:"Изомер лейцина: разветвление в другом месте боковой цепи. Незаменимая.", codon:"AUU / AUC / AUA"},
-{name:"Метионин", cid:6137, formula:"C₅H₁₁NO₂S", cat:"Неполярная (гидрофобная)", group:1, desc:"Содержит атом серы (S). Всегда первая аминокислота синтезируемого белка — стартовый кодон.", codon:"AUG"},
-{name:"Пролин", cid:145742, formula:"C₅H₉NO₂", cat:"Неполярная (гидрофобная)", group:1, desc:"Единственная аминокислота, у которой боковая цепь замкнута в кольцо вместе с аминогруппой. Ломает спирали белков.", codon:"CCU / CCC / CCA / CCG"},
-{name:"Фенилаланин", cid:6140, formula:"C₉H₁₁NO₂", cat:"Неполярная (гидрофобная)", group:1, desc:"Содержит бензольное кольцо. Незаменимая. При её неусвоении — фенилкетонурия.", codon:"UUU / UUC"},
-{name:"Триптофан", cid:6305, formula:"C₁₁H₁₂N₂O₂", cat:"Неполярная (гидрофобная)", group:1, desc:"Самая крупная из 20: двойное индольное кольцо. Из неё синтезируется серотонин.", codon:"UGG"},
-{name:"Глицин", cid:750, formula:"C₂H₅NO₂", cat:"Полярная (нейтральная)", group:2, desc:"Простейшая: боковая цепь — всего один атом водорода. Единственная без оптических изомеров.", codon:"GGU / GGC / GGA / GGG"},
-{name:"Серин", cid:5951, formula:"C₃H₇NO₃", cat:"Полярная (нейтральная)", group:2, desc:"Боковая цепь несёт спиртовую группу -OH. Входит в активные центры ферментов.", codon:"UCU-UCC-UCA-UCG"},
-{name:"Треонин", cid:6108, formula:"C₄H₉NO₃", cat:"Полярная (нейтральная)", group:2, desc:"Боковая цепь с гидроксильной группой -OH. Незаменимая.", codon:"ACU / ACC / ACA / ACG"},
-{name:"Цистеин", cid:5862, formula:"C₃H₇NO₂S", cat:"Полярная (нейтральная)", group:2, desc:"Содержит сульфгидрильную группу -SH. Два цистеина образуют дисульфидный мостик, укрепляющий белок (кератин волос).", codon:"UGU / UGC"},
-{name:"Тирозин", cid:6057, formula:"C₉H₁₁NO₃", cat:"Полярная (нейтральная)", group:2, desc:"Фенилаланин с группой -OH на кольце. Предшественник адреналина, тироксина и меланина.", codon:"UAU / UAC"},
-{name:"Аспарагин", cid:6267, formula:"C₄H₈N₂O₃", cat:"Полярная (нейтральная)", group:2, desc:"Амид аспарагиновой кислоты: боковая цепь несёт -CONH₂ вместо -COOH.", codon:"AAU / AAC"},
-{name:"Глутамин", cid:5961, formula:"C₅H₁₀N₂O₃", cat:"Полярная (нейтральная)", group:2, desc:"Амид глутаминовой кислоты. Главная транспортная форма аммиака в крови.", codon:"CAA / CAG"},
-{name:"Лизин", cid:5962, formula:"C₆H₁₄N₂O₂", cat:"Основная", group:3, desc:"Длинная боковая цепь с аминогруппой -NH₂ на конце. Незаменимая: её нет в злаках.", codon:"AAA / AAG"},
-{name:"Аргинин", cid:6322, formula:"C₆H₁₄N₄O₂", cat:"Основная", group:3, desc:"Самая основная из 20: боковая цепь с гуанидиновой группировкой. Участвует в цикле мочевины.", codon:"CGU-CGG / AGA-AGG"},
-{name:"Гистидин", cid:6274, formula:"C₆H₉N₃O₂", cat:"Основная", group:3, desc:"Содержит имидазольное кольцо. Из него синтезируется гистамин — медиатор аллергии.", codon:"CAU / CAC"},
-{name:"Аспарагиновая кислота", cid:5960, formula:"C₄H₇NO₄", cat:"Кислая", group:4, desc:"Две карбоксильные группы -COOH: при pH 7 боковая цепь несёт отрицательный заряд. Названа в честь спаржи.", codon:"GAU / GAC"},
-{name:"Глутаминовая кислота", cid:33032, formula:"C₅H₉NO₄", cat:"Кислая", group:4, desc:"Её соль — глутамат натрия, усилитель вкуса. Главный возбуждающий нейромедиатор мозга.", codon:"GAA / GAG"}
-];
+    <script>
+        // База данных аминокислот (соответствует твоему фото)
+        const aminoAcids = [
+            { name: "Аланин", formula: "H₂N-CH(CH₃)-COOH", category: "Неполярная (гидрофобная)" },
+            { name: "Валин", formula: "H₂N-CH(CH(CH₃)₂)-COOH", category: "Неполярная (гидрофобная)" },
+            { name: "Лейцин", formula: "H₂N-CH(CH₂CH(CH₃)₂)-COOH", category: "Неполярная (гидрофобная)" },
+            { name: "Изолейцин", formula: "H₂N-CH(CH(CH₃)CH₂CH₃)-COOH", category: "Неполярная (гидрофобная)" },
+            { name: "Метионин", formula: "H₂N-CH(CH₂CH₂SCH₃)-COOH", category: "Неполярная (гидрофобная)" },
+            { name: "Пролин", formula: "C₅H₉NO₂ (циклическая структура)", category: "Неполярная (гидрофобная)" },
+            { name: "Фенилаланин", formula: "H₂N-CH(CH₂C₆H₅)-COOH", category: "Неполярная (гидрофобная)" },
+            { name: "Триптофан", formula: "C₁₁H₁₂N₂O₂ (индольное кольцо)", category: "Неполярная (гидрофобная)" },
+            { name: "Глицин", formula: "H₂N-CH₂-COOH", category: "Полярная нейтральная" },
+            { name: "Серин", formula: "H₂N-CH(CH₂OH)-COOH", category: "Полярная нейтральная" },
+            { name: "Треонин", formula: "H₂N-CH(CH(OH)CH₃)-COOH", category: "Полярная нейтральная" },
+            { name: "Цистеин", formula: "H₂N-CH(CH₂SH)-COOH", category: "Полярная нейтральная" },
+            { name: "Тирозин", formula: "H₂N-CH(CH₂C₆H₄OH)-COOH", category: "Полярная нейтральная" },
+            { name: "Аспарагин", formula: "H₂N-CH(CH₂CONH₂)-COOH", category: "Полярная нейтральная" },
+            { name: "Глутамин", formula: "H₂N-CH(CH₂CH₂CONH₂)-COOH", category: "Полярная нейтральная" },
+            { name: "Лизин", formula: "H₂N-CH((CH₂)₄NH₂)-COOH", category: "Основная" },
+            { name: "Аргинин", formula: "H₂N-CNH(CH₂)₃CHNH-COOH", category: "Основная" },
+            { name: "Гистидин", formula: "C₆H₉N₃O₂ (имидазольное кольцо)", category: "Основная" },
+            { name: "Аспарагиновая кислота", formula: "H₂N-CH(CH₂COOH)-COOH", category: "Кислая" },
+            { name: "Глутаминовая кислота", formula: "H₂N-CH(CH₂CH₂COOH)-COOH", category: "Кислая" }
+        ];
 
-var catColors = {1:"cat1", 2:"cat2", 3:"cat3", 4:"cat4"};
-var current = 0;
-var dotsBox = document.getElementById('dots');
+        let currentIndex = 0;
 
-// строим точки-навигацию
-for(var i = 0; i < aminoAcids.length; i++){
-  var d = document.createElement('button');
-  d.className = 'dot ' + catColors[aminoAcids[i].group];
-  d.title = aminoAcids[i].name;
-  (function(idx){ d.onclick = function(){ current = idx; render(); }; })(i);
-  dotsBox.appendChild(d);
-}
+        function updateDisplay() {
+            const amino = aminoAcids[currentIndex];
+            document.getElementById('amino-name').textContent = amino.name;
+            document.getElementById('amino-formula').textContent = amino.formula;
+            document.getElementById('amino-category').textContent = amino.category;
 
-function render(){
-  var a = aminoAcids[current];
+            // Блокировка кнопок на краях
+            document.getElementById('prev-btn').disabled = currentIndex === 0;
+            document.getElementById('next-btn').disabled = currentIndex === aminoAcids.length - 1;
+        }
 
-  document.getElementById('amino-name').textContent = a.name;
-  document.getElementById('amino-cat').textContent = a.cat;
-  document.getElementById('amino-formula').textContent = 'Формула: ' + a.formula;
-  document.getElementById('amino-desc').innerHTML =
-    a.desc + '<br><br><b>Кодоны иРНК:</b> <span class="codon">' + a.codon + '</span>';
-  document.getElementById('struct-img').src =
-    'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/' + a.cid +
-    '/PNG?image_size=400x400&record_type=2d';
-  document.getElementById('counter').textContent = (current + 1) + ' из ' + aminoAcids.length;
+        function changeAmino(step) {
+            currentIndex += step;
+            if (currentIndex < 0) currentIndex = 0;
+            if (currentIndex >= aminoAcids.length) currentIndex = aminoAcids.length - 1;
+            updateDisplay();
+        }
 
-  var dots = dotsBox.children;
-  for(var i = 0; i < dots.length; i++){
-    dots[i].className = 'dot ' + catColors[aminoAcids[i].group] + (i === current ? ' active' : '');
-  }
-
-  document.getElementById('prev').disabled = (current === 0);
-  document.getElementById('next').disabled = (current === aminoAcids.length - 1);
-}
-
-function change(step){
-  var next = current + step;
-  if(next < 0 || next >= aminoAcids.length) return;
-  current = next;
-  render();
-}
-
-render();
-</script>
+        // Инициализация
+        updateDisplay();
+    </script>
 </body>
 </html>
-

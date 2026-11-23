@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ДНК: 3D и репликация</title>
-<script src="https://cdn.jsdelivr.net/npm/3dmol@2.0.5/build/3Dmol-min.js"></script>
+<title>ДНК: репликация в 3D</title>
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
 :root{--bg:#050510;--panel:#111122;--accent:#4fc3f7;--text:#e0e0e0;--sec:#a0a0b0;}
 *{box-sizing:border-box}
@@ -13,33 +14,18 @@ header{position:sticky;top:0;background:var(--panel);border-bottom:1px solid #33
 .logo{font-weight:bold;color:var(--accent);letter-spacing:1px}
 .back{padding:8px 16px;border:1px solid #444;border-radius:20px;color:var(--text);text-decoration:none;font-size:14px}
 .back:hover{background:var(--accent);color:#000}
-main{flex:1;max-width:1100px;margin:0 auto;width:100%;padding:20px;display:flex;flex-direction:column;align-items:center}
-h1{color:var(--accent);font-size:24px;text-align:center}
-
-/* 3D-сцена */
-#viewer{width:100%;height:400px;max-width:95vw;position:relative;border:1px solid #333;border-radius:12px;background:rgba(0,0,0,.3);box-shadow:0 0 20px rgba(79,195,247,.15);margin-bottom:16px}
-#status{position:absolute;bottom:8px;left:12px;font-size:12px;color:#888}
-
-/* Карточки стадий репликации */
-.steps-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;margin:20px 0}
-.step-card{background:rgba(255,255,255,.05);border:1px solid #2a2a3d;border-radius:10px;padding:16px;text-align:center}
-.step-num{font-size:32px;color:var(--accent);font-weight:bold;line-height:1}
-.step-title{color:var(--accent);font-weight:bold;margin:8px 0}
-.step-desc{color:var(--sec);font-size:13px;line-height:1.5}
-
-/* Схема цепей */
-.chain-legend{background:rgba(255,255,255,.05);border-left:4px solid var(--accent);padding:16px;border-radius:8px;max-width:700px;color:var(--sec);margin-top:20px}
-.chain-legend b{color:var(--accent)}
-.chain-box{display:inline-block;width:12px;height:12px;border-radius:4px;margin:0 4px}
-.chain-old{background:#4fc3f7}
-.chain-new{background:#e57373}
-
-.controls{display:flex;gap:16px;margin:16px 0}
-.nav-btn{padding:12px 26px;border:1px solid rgba(79,195,247,.4);background:rgba(255,255,255,.05);color:var(--accent);cursor:pointer;border-radius:8px;font-size:15px;font-weight:bold;transition:.2s}
-.nav-btn:hover{background:var(--accent);color:#000}
-.nav-btn:disabled{opacity:.25;cursor:not-allowed}
-
-.hint{background:rgba(255,255,255,.05);border-left:4px solid var(--accent);padding:14px;border-radius:8px;max-width:700px;color:var(--sec);font-size:13px;text-align:center;margin-top:16px}
+main{flex:1;max-width:1100px;margin:0 auto;width:100%;padding:16px;display:flex;flex-direction:column;align-items:center}
+h1{color:var(--accent);font-size:22px;text-align:center}
+#scene{width:100%;max-width:900px;height:460px;border:1px solid #333;border-radius:12px;background:rgba(0,0,0,.35);overflow:hidden}
+.status-line{color:var(--accent);font-size:15px;margin:12px 0 4px;min-height:22px;text-align:center}
+.controls{display:flex;gap:14px;margin:10px 0;flex-wrap:wrap;justify-content:center}
+.ctrl{padding:12px 24px;border:1px solid rgba(79,195,247,.4);background:rgba(255,255,255,.05);color:var(--accent);cursor:pointer;border-radius:8px;font-size:15px;font-weight:bold;transition:.2s}
+.ctrl:hover{background:var(--accent);color:#000}
+.legend{background:rgba(255,255,255,.05);border-left:4px solid var(--accent);padding:14px 18px;border-radius:8px;max-width:760px;color:var(--sec);font-size:13px;margin-top:16px;text-align:center}
+.legend b{color:var(--accent)}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin:0 3px;vertical-align:middle}
+.dot-A{background:#ff5252}.dot-T{background:#4fc3f7}.dot-G{background:#69f0ae}.dot-C{background:#ffd54f}
+.dot-old{background:#cfd8dc}.dot-new{background:#f48fb1}
 </style>
 </head>
 <body>
@@ -48,141 +34,200 @@ h1{color:var(--accent);font-size:24px;text-align:center}
 <a class="back" href="index.html">← К моделям</a>
 </header>
 <main>
-<h1>3D ДНК и стадии репликации</h1>
-
-<div id="viewer"><div id="status">Загрузка ДНК...</div></div>
-
+<h1>Репликация ДНК в 3D</h1>
+<div id="scene"></div>
+<div class="status-line" id="status">Нажми «Запустить репликацию»</div>
 <div class="controls">
-<button class="nav-btn" id="prev" onclick="changeStage(-1)">← Предыдущая стадия</button>
-<button class="nav-btn" id="next" onclick="changeStage(1)">Следующая стадия →</button>
+<button class="ctrl" id="play">▶ Запустить репликацию</button>
+<button class="ctrl" id="reset">↺ Сброс</button>
 </div>
-
-<div class="steps-grid">
-<div class="step-card">
-<div class="step-num">1</div>
-<div class="step-title">До репликации</div>
-<div class="step-desc">Замкнутая двойная спираль. Обе цепи — исходные (родительские). Водородные связи между азотистыми основаниями удерживают цепи вместе.</div>
-</div>
-<div class="step-card">
-<div class="step-num">2</div>
-<div class="step-title">В процессе репликации</div>
-<div class="step-desc">Хеликаза расплетает спираль, образуя репликационную вилку. На одной цепи синтез идёт непрерывно (лидирующая), на другой — фрагментами Оказаки (отстающая).</div>
-</div>
-<div class="step-card">
-<div class="step-num">3</div>
-<div class="step-title">После репликации</div>
-<div class="step-desc">Образовались две идентичные двойные спирали. Каждая содержит одну старую и одну новую цепь (полуконсервативный механизм).</div>
-</div>
-</div>
-
-<div class="chain-legend">
-<b>Как читать схему:</b> в 3D-модели старые цепи будут <span class="chain-box chain-old"></span> голубыми, новые — <span class="chain-box chain-new"></span> розовыми. Синтез новой цепи всегда идёт в направлении 5'→3', а матрица читается 3'→5'.
-</div>
-
-<div class="hint">
-<b>Управление 3D:</b> вращай молекулу левой кнопкой мыши, приближай — колёсиком, сдвигай — правой кнопкой.
+<div class="legend">
+<b>Обозначения:</b> шарики — азотистые основания: <span class="dot dot-A"></span>А <span class="dot dot-T"></span>Т <span class="dot dot-G"></span>Г <span class="dot dot-C"></span>Ц.
+Серые перемычки — водородные связи между старыми цепями. <span class="dot dot-new"></span>Розовые связи — новосинтезированная цепь: она достраивается по правилу комплементарности (А-Т, Г-Ц).<br>
+Вращение — левой кнопкой мыши, зум — колёсиком.
 </div>
 </main>
-
 <script>
-var stages = [
-{
-  title: "До репликации",
-  desc: "Замкнутая двойная спираль. Обе цепи — исходные (родительские). Водородные связи между азотистыми основаниями удерживают цепи вместе.",
-  dna: "ATGCATGC" // короткая последовательность для примера
-},
-{
-  title: "В процессе репликации",
-  desc: "Хеликаза расплетает спираль, образуя репликационную вилку. На одной цепи синтез идёт непрерывно (лидирующая), на другой — фрагментами Оказаки (отстающая).",
-  dna: "ATGCATGC"
-},
-{
-  title: "После репликации",
-  desc: "Образовались две идентичные двойные спирали. Каждая содержит одну старую и одну новую цепь (полуконсервативный механизм).",
-  dna: "ATGCATGC"
+var container = document.getElementById('scene');
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+camera.position.set(14, 6, 52);
+camera.lookAt(0, 0, 0);
+var renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(container.clientWidth, container.clientHeight);
+container.appendChild(renderer.domElement);
+
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+var dl = new THREE.DirectionalLight(0xffffff, 0.85);
+dl.position.set(20, 30, 40);
+scene.add(dl);
+
+// --- параметры спирали ---
+var N = 44;                 // число пар оснований
+var R = 5;                  // радиус спирали
+var RISE = 0.9;             // шаг по высоте на одну пару
+var TWIST = 0.62;           // угол закрутки на одну пару
+var Z0 = -N * RISE / 2;
+var SEP = 5;                // расхождение цепей при репликации
+var NEWOFF = 1.8;           // отступ новой цепи от старой
+
+var SEQ = "ATGC".repeat(11); // 44 основания
+var BASE_COLORS = {A:0xff5252, T:0x4fc3f7, G:0x69f0ae, C:0xffd54f};
+var COMP = {A:'T', T:'A', G:'C', C:'G'};
+
+var dnaGroup = new THREE.Group();
+scene.add(dnaGroup);
+
+var geoBig = new THREE.SphereGeometry(0.6, 16, 16);
+var geoSmall = new THREE.SphereGeometry(0.42, 16, 16);
+var geoCyl = new THREE.CylinderGeometry(0.2, 0.2, 1, 8);
+var geoThin = new THREE.CylinderGeometry(0.13, 0.13, 1, 8);
+
+var matCache = {};
+function mat(color){
+  if(!matCache[color]) matCache[color] = new THREE.MeshPhongMaterial({color:color, shininess:60});
+  return matCache[color];
 }
-];
+var matGrey = mat(0x90a4ae);
+var matPink = mat(0xf48fb1);
 
-var currentStage = 0;
-var viewer = null;
-var loading = false;
-
-function initViewer(){
-  viewer = \$3Dmol.createViewer(document.getElementById('viewer'), {
-    backgroundColor: '#050510'
-  });
+function addSphere(geo, color){
+  var m = new THREE.Mesh(geo, mat(color));
+  dnaGroup.add(m);
+  return m;
+}
+function addCyl(geo, material){
+  var m = new THREE.Mesh(geo, material);
+  dnaGroup.add(m);
+  return m;
+}
+var UP = new THREE.Vector3(0, 1, 0);
+function setCyl(mesh, p1, p2){
+  var dir = new THREE.Vector3().subVectors(p2, p1);
+  var len = dir.length();
+  mesh.position.copy(p1).addScaledVector(dir, 0.5);
+  mesh.scale.set(1, Math.max(len, 0.001), 1);
+  mesh.quaternion.setFromUnitVectors(UP, dir.normalize());
 }
 
-// Генерируем простую 3D-структуру ДНК (двойная спираль)
-function renderDna(stageIndex){
-  if(loading) return;
-  loading = true;
-  document.getElementById('status').textContent = 'Построение модели ДНК...';
-  document.getElementById('status').style.color = '#4fc3f7';
+// строим все объекты
+var backA = [], backB = [], rung = [], segA = [], segB = [];
+var newA = [], newB = [], linkA = [], linkB = [], newSegA = [], newSegB = [];
 
-  viewer.clear();
+for(var i = 0; i < N; i++){
+  var b = SEQ[i];
+  backA.push(addSphere(geoBig, BASE_COLORS[b]));
+  backB.push(addSphere(geoBig, BASE_COLORS[COMP[b]]));
+  rung.push(addCyl(geoCyl, matGrey));
+  newA.push(addSphere(geoSmall, BASE_COLORS[COMP[b]]));
+  newB.push(addSphere(geoSmall, BASE_COLORS[b]));
+  linkA.push(addCyl(geoThin, matPink));
+  linkB.push(addCyl(geoThin, matPink));
+}
+for(var i = 0; i < N - 1; i++){
+  segA.push(addCyl(geoCyl, matGrey));
+  segB.push(addCyl(geoCyl, matGrey));
+  newSegA.push(addCyl(geoCyl, matPink));
+  newSegB.push(addCyl(geoCyl, matPink));
+}
 
-  // Для простоты рисуем две цепи как спирали
-  // Цепь 1 (старая) — голубая
-  // Цепь 2 (новая) — розовая (на разных стадиях цвет меняется)
-  
-  var oldColor = "0x4fc3f7"; // голубой
-  var newColor = "0xe57373"; // розовый
+// --- анимация репликации ---
+var rp = 0;          // прогресс 0..1
+var playing = false;
+var statusEl = document.getElementById('status');
 
-  // Рисуем две спирали (упрощённо — как трубки)
-  // В реальной библиотеке можно загрузить PDB, но для анимации лучше генерировать
-  
-  // Добавляем две цепи ДНК (упрощённая модель)
-  var model = viewer.addModel(undefined, 'pdb');
-  
-  // Генерируем атомы для двух цепей (упрощённо)
-  // Цепь 1: старая
-  for(var i=0; i<10; i++){
-    model.addAtom({serial: i, name: 'C', resn: 'DA', chain: 'A', x: Math.cos(i*0.5)*10, y: Math.sin(i*0.5)*10, z: i*3, element: 'C', color: oldColor});
+function posA(i, sep){
+  var a = i * TWIST;
+  return new THREE.Vector3(R * Math.cos(a) + sep * SEP, R * Math.sin(a), Z0 + i * RISE);
+}
+function posB(i, sep){
+  var p = posA(i, sep);
+  return new THREE.Vector3(-p.x, -p.y, p.z);
+}
+
+function updateScene(){
+  var forkIdx = Math.floor(rp * N);
+  var synthIdx = forkIdx - 2; // синтез чуть отстаёт от вилки
+  for(var i = 0; i < N; i++){
+    var sep = (i < forkIdx) ? Math.min(1, (forkIdx - i) / 6) : 0;
+    var pA = posA(i, sep);
+    var pB = posB(i, sep);
+    backA[i].position.copy(pA);
+    backB[i].position.copy(pB);
+
+    // перемычка между старыми цепями — только в нерасплетённой части
+    if(i >= forkIdx){ rung[i].visible = true; setCyl(rung[i], pA, pB); }
+    else { rung[i].visible = false; }
+
+    var synth = (i <= synthIdx) ? 1 : 0;
+    newA[i].visible = synth === 1;
+    newB[i].visible = synth === 1;
+    linkA[i].visible = synth === 1;
+    linkB[i].visible = synth === 1;
+    if(synth){
+      var nA = pA.clone(); nA.x -= NEWOFF;
+      var nB = pB.clone(); nB.x += NEWOFF;
+      newA[i].position.copy(nA);
+      newB[i].position.copy(nB);
+      setCyl(linkA[i], pA, nA);
+      setCyl(linkB[i], pB, nB);
+    }
   }
-  // Цепь 2: новая (на разных стадиях показываем по-разному)
-  for(var i=0; i<10; i++){
-    model.addAtom({serial: i+10, name: 'C', resn: 'DA', chain: 'B', x: Math.cos(i*0.5+3.14)*10, y: Math.sin(i*0.5+3.14)*10, z: i*3, element: 'C', color: (stageIndex === 1 || stageIndex === 2) ? newColor : oldColor});
+  for(var i = 0; i < N - 1; i++){
+    setCyl(segA[i], backA[i].position, backA[i+1].position);
+    setCyl(segB[i], backB[i].position, backB[i+1].position);
+    var s = (i <= synthIdx - 1) ? 1 : 0;
+    newSegA[i].visible = s === 1;
+    newSegB[i].visible = s === 1;
+    if(s){
+      setCyl(newSegA[i], newA[i].position, newA[i+1].position);
+      setCyl(newSegB[i], newB[i].position, newB[i+1].position);
+    }
   }
+}
 
-  // Стилизуем как спирали
-  viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
-  // Переопределяем цвета для наглядности
-  viewer.setStyle({chain: 'A'}, {cartoon: {color: oldColor}});
-  viewer.setStyle({chain: 'B'}, {cartoon: {color: (stageIndex === 1 || stageIndex === 2) ? newColor : oldColor}});
+function phaseText(){
+  if(rp <= 0) return 'Двойная спираль готова к репликации. Нажми «Запустить».';
+  if(rp < 0.5) return 'Хеликаза расплетает спираль — образуется репликационная вилка.';
+  if(rp < 1) return 'ДНК-полимераза достраивает новые цепи (5\u2019\u21923\u2019).';
+  return 'Готово! Образовались две молекулы ДНК — полуконсервативный механизм.';
+}
 
-  // Добавляем "основания" (упрощённо как сферы)
-  for(var i=0; i<10; i++){
-    viewer.addSphere({center: {x: Math.cos(i*0.5)*12, y: Math.sin(i*0.5)*12, z: i*3}, radius: 1.5, color: oldColor});
-    viewer.addSphere({center: {x: Math.cos(i*0.5+3.14)*12, y: Math.sin(i*0.5+3.14)*12, z: i*3}, radius: 1.5, color: (stageIndex === 1 || stageIndex === 2) ? newColor : oldColor});
+var clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  var dt = clock.getDelta();
+  if(playing && rp < 1){
+    rp = Math.min(1, rp + dt * 0.12);
   }
-
-  viewer.zoomTo();
-  viewer.render();
-  loading = false;
-  document.getElementById('status').textContent = 'Вращай модель, смотри стадии';
-  document.getElementById('status').style.color = '#4fc3f7';
+  dnaGroup.rotation.y += 0.003;
+  updateScene();
+  statusEl.textContent = phaseText();
+  controls.update();
+  renderer.render(scene, camera);
 }
 
-function updateStageInfo(idx){
-  // Здесь можно обновлять текст, но у нас он статичен в HTML
-  document.getElementById('prev').disabled = (idx === 0);
-  document.getElementById('next').disabled = (idx === stages.length - 1);
+function onResize(){
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
 }
+window.addEventListener('resize', onResize);
 
-function changeStage(step){
-  var next = currentStage + step;
-  if(next < 0 || next >= stages.length) return;
-  currentStage = next;
-  renderDna(currentStage);
-  updateStageInfo(currentStage);
-}
+document.getElementById('play').onclick = function(){
+  if(rp >= 1) rp = 0;
+  playing = !playing;
+  this.textContent = playing ? '\u23F8 Пауза' : '\u25B6 Продолжить';
+};
+document.getElementById('reset').onclick = function(){
+  rp = 0; playing = false;
+  document.getElementById('play').textContent = '\u25B6 Запустить репликацию';
+};
 
-window.addEventListener('load', function(){
-  initViewer();
-  renderDna(0);
-  updateStageInfo(0);
-});
+animate();
 </script>
 </body>
 </html>

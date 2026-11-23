@@ -2,590 +2,313 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Репликация ДНК 3D</title>
-<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Репликация ДНК в 3D</title>
 <style>
-  body { margin: 0; overflow: hidden; background: #050510; font-family: sans-serif; }
-  
-  /* ЖЁСТКИЕ РАЗМЕРЫ ДЛЯ СЦЕНЫ - ЭТО ГЛАВНОЕ, ЧТОБЫ НЕ БЫЛО ЧЁРНОГО ЭКРАНА */
-  #scene-container {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-  }
-
-  /* Панель управления поверх сцены */
-  .ui-panel {
-    position: absolute;
-    top: 20px; left: 20px; right: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #fff;
-    pointer-events: none; /* Чтобы клики проходили сквозь текст, если нужно */
-    z-index: 10;
-  }
-  
-  .btn-group {
-    pointer-events: auto;
-    display: flex;
-    gap: 10px;
-  }
-
-  button {
-    padding: 10px 20px;
-    font-size: 14px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    border-radius: 4px;
-  }
-  button:hover { background: rgba(255, 255, 255, 0.2); }
-
-  .legend {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 10px;
-    color: #aaa;
-    font-size: 12px;
-    pointer-events: auto;
-    border-radius: 4px;
-    max-width: 600px;
-  }
-  .dot { width: 10px; height: 10px; display: inline-block; border-radius: 50%; margin-right: 5px; }
+:root{--bg:#050510;--panel:#111122;--accent:#4fc3f7;--text:#e0e0e0;--sec:#a0a0b0;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--panel);border-bottom:1px solid #333;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:bold;color:var(--accent)}
+.back{padding:8px 16px;border:1px solid #444;border-radius:20px;color:var(--text);text-decoration:none;font-size:14px}
+.back:hover{background:var(--accent);color:#000}
+main{flex:1;max-width:1000px;margin:0 auto;width:100%;padding:16px;display:flex;flex-direction:column;align-items:center}
+h1{color:var(--accent);font-size:22px;text-align:center}
+#scene{width:100%;max-width:900px;height:480px;border:1px solid #333;border-radius:12px;background:#050510;overflow:hidden;cursor:grab}
+#status{color:var(--accent);font-size:15px;margin:12px 0 4px;min-height:22px;text-align:center}
+.controls{display:flex;gap:12px;margin:10px 0;flex-wrap:wrap;justify-content:center}
+.ctrl{padding:12px 24px;border:1px solid rgba(79,195,247,.4);background:rgba(255,255,255,.05);color:var(--accent);cursor:pointer;border-radius:8px;font-size:15px;font-weight:bold}
+.ctrl:hover{background:var(--accent);color:#000}
+.legend{background:rgba(255,255,255,.05);border-left:4px solid var(--accent);padding:12px 16px;border-radius:8px;max-width:760px;color:var(--sec);font-size:13px;margin-top:14px;text-align:center}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin:0 2px;vertical-align:middle}
 </style>
 </head>
 <body>
-
-  <div id="scene-container"></div>
-
-  <div class="ui-panel">
-    <h2 style="margin:0; color:#4fc3f7;">Репликация ДНК в 3D</h2>
-    <div class="btn-group">
-      <button id="btn-play">▶ Запустить</button>
-      <button id="btn-reset">↺ Сброс</button>
-    </div>
-  </div>
-
-  <div class="legend">
-    <b>Обозначения:</b><br>
-    <span class="dot" style="background:#ff5252"></span>А | 
-    <span class="dot" style="background:#4fc3f7"></span>Т | 
-    <span class="dot" style="background:#69f0ae"></span>Г | 
-    <span class="dot" style="background:#ffd54f"></span>Ц<br>
-    Серые перемычки — водородные связи. Розовые — новая цепь.<br>
-    <i>Управление: Вращение — ЛКМ, Зум — Колесо, Орбита — ПКМ</i>
-  </div>
-
+<header>
+<span class="logo">🧬 ДНК и репликация</span>
+<a class="back" href="index.html">← К моделям</a>
+</header>
+<main>
+<h1>Репликация ДНК в 3D</h1>
+<div id="scene"></div>
+<div id="status">Нажми «Запустить»</div>
+<div class="controls">
+<button class="ctrl" id="bPlay">▶ Запустить</button>
+<button class="ctrl" id="bBack">◀ Назад</button>
+<button class="ctrl" id="bReset">↺ Сброс</button>
+</div>
+<div class="legend">
+<b>Обозначения:</b> шарики — азотистые основания:
+<span class="dot" style="background:#ff5252"></span>А
+<span class="dot" style="background:#4fc3f7"></span>Т
+<span class="dot" style="background:#69f0ae"></span>Г
+<span class="dot" style="background:#ffd54f"></span>Ц.
+Серые перемычки — водородные связи исходной спирали, розовые — новые цепи, которые достраиваются по комплементарности. В конце получаются две молекулы ДНК.<br>
+Вращение — левой кнопкой мыши, зум — колёсиком.
+</div>
+</main>
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 <script>
-  // --- Инициализация Three.js ---
-  const container = document.getElementById('scene-container');
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x050510); // Тёмный фон сцены
-  
-  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 10, 25);
+(function(){
+if(typeof THREE === 'undefined'){
+  document.getElementById('status').textContent = 'Библиотека 3D не загрузилась — проверь интернет и обнови страницу (Ctrl+F5)';
+  return;
+}
+
+var container = document.getElementById('scene');
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050510);
+
+var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+var camDist = 58;
+
+var renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+container.appendChild(renderer.domElement);
+
+function fit(){
+  var w = container.clientWidth, h = container.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+fit();
+window.addEventListener('resize', fit);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+var dl = new THREE.DirectionalLight(0xffffff, 0.9);
+dl.position.set(30, 40, 50);
+scene.add(dl);
+var dl2 = new THREE.DirectionalLight(0x88aaff, 0.3);
+dl2.position.set(-40, -20, -30);
+scene.add(dl2);
+
+// --- параметры спирали ---
+var N = 40;
+var R = 4.5;
+var RISE = 0.8;
+var TWIST = 0.65;
+var Z0 = -N * RISE / 2;
+var OFF = 8;
+
+var SEQ = '';
+for(var i = 0; i < N; i++) SEQ += 'ATGC'[i % 4];
+var BASE_COLORS = {A:0xff5252, T:0x4fc3f7, G:0x69f0ae, C:0xffd54f};
+var COMP = {A:'T', T:'A', G:'C', C:'G'};
+
+var dnaGroup = new THREE.Group();
+scene.add(dnaGroup);
+
+var geoSphere = new THREE.SphereGeometry(0.55, 16, 16);
+var geoRung = new THREE.CylinderGeometry(0.16, 0.16, 1, 8);
+var geoBone = new THREE.CylinderGeometry(0.22, 0.22, 1, 8);
+
+var mats = {};
+function mat(color){
+  if(!mats[color]) mats[color] = new THREE.MeshPhongMaterial({color:color, shininess:70});
+  return mats[color];
+}
+var mGrey = mat(0x90a4ae);
+var mPink = mat(0xf48fb1);
+
+var oldA = [], oldB = [], rung = [];
+var newA = [], newB = [], rungA = [], rungB = [];
+var boneA = [], boneB = [], nboneA = [], nboneB = [];
+
+function addSphere(color){
+  var m = new THREE.Mesh(geoSphere, mat(color));
+  dnaGroup.add(m);
+  return m;
+}
+function addCyl(material){
+  var m = new THREE.Mesh(geoRung, material);
+  dnaGroup.add(m);
+  return m;
+}
+function addBone(material){
+  var m = new THREE.Mesh(geoBone, material);
+  dnaGroup.add(m);
+  return m;
+}
+
+for(var i = 0; i < N; i++){
+  var b = SEQ[i];
+  oldA.push(addSphere(BASE_COLORS[b]));
+  oldB.push(addSphere(BASE_COLORS[COMP[b]]));
+  rung.push(addCyl(mGrey));
+  newA.push(addSphere(BASE_COLORS[COMP[b]]));
+  newB.push(addSphere(BASE_COLORS[b]));
+  rungA.push(addCyl(mPink));
+  rungB.push(addCyl(mPink));
+  newA[i].visible = false;
+  newB[i].visible = false;
+  rungA[i].visible = false;
+  rungB[i].visible = false;
+}
+for(var i = 0; i < N - 1; i++){
+  boneA.push(addBone(mGrey));
+  boneB.push(addBone(mGrey));
+  nboneA.push(addBone(mPink));
+  nboneB.push(addBone(mPink));
+  nboneA[i].visible = false;
+  nboneB[i].visible = false;
+}
+
+// позиция точки спирали: axis — смещение оси по X, first — какая из двух цепей
+function helixPoint(i, axis, first){
+  var a = i * TWIST;
+  if(first) return new THREE.Vector3(axis + R * Math.cos(a), R * Math.sin(a), Z0 + i * RISE);
+  return new THREE.Vector3(axis - R * Math.cos(a), -R * Math.sin(a), Z0 + i * RISE);
+}
+
+var UP = new THREE.Vector3(0, 1, 0);
+function setCyl(mesh, p1, p2){
+  var dir = new THREE.Vector3().subVectors(p2, p1);
+  var len = dir.length();
+  mesh.position.copy(p1).addScaledVector(dir, 0.5);
+  mesh.scale.y = Math.max(len, 0.001);
+  dir.normalize();
+  mesh.quaternion.setFromUnitVectors(UP, dir);
+}
+
+// --- состояние анимации ---
+var progress = 0;
+var playing = false;
+var dir = 1;
+var statusEl = document.getElementById('status');
+
+function update(){
+  var fork = progress * N;
+  var isFinal = progress >= 0.999;
+
+  for(var i = 0; i < N; i++){
+    var s = (i < fork) ? Math.min(1, (fork - i) / 6) : 0;
+    var axis = s * OFF;
+
+    var pA = helixPoint(i, axis, true);
+    var pB = helixPoint(i, -axis, false);
+    oldA[i].position.copy(pA);
+    oldB[i].position.copy(pB);
+
+    var intact = (i >= fork);
+    rung[i].visible = intact;
+    if(intact) setCyl(rung[i], pA, pB);
+
+    var synth = (i < fork - 2.5);
+    newA[i].visible = synth;
+    newB[i].visible = synth;
+    rungA[i].visible = synth;
+    rungB[i].visible = synth;
+
+    if(synth){
+      var nA = helixPoint(i, axis, false);
+      var nB = helixPoint(i, -axis, true);
+      newA[i].position.copy(nA);
+      newB[i].position.copy(nB);
+      setCyl(rungA[i], pA, nA);
+      setCyl(rungB[i], pB, nB);
+    }
+  }
+
+  for(var i = 0; i < N - 1; i++){
+    setCyl(boneA[i], oldA[i].position, oldA[i + 1].position);
+    setCyl(boneB[i], oldB[i].position, oldB[i + 1].position);
+    var ok = (i < fork - 3.5);
+    nboneA[i].visible = ok;
+    nboneB[i].visible = ok;
+    if(ok){
+      setCyl(nboneA[i], newA[i].position, newA[i + 1].position);
+      setCyl(nboneB[i], newB[i].position, newB[i + 1].position);
+    }
+  }
+
+  if(progress <= 0) statusEl.textContent = 'Исходная двойная спираль. Нажми «Запустить».';
+  else if(progress < 0.5) statusEl.textContent = 'Хеликаза расплетает спираль — образуется репликационная вилка.';
+  else if(!isFinal) statusEl.textContent = 'ДНК-полимераза достраивает новые цепи по правилу комплементарности.';
+  else statusEl.textContent = 'Готово! Две молекулы ДНК: в каждой одна старая и одна новая цепь.';
+}
+
+function loop(){
+  requestAnimationFrame(loop);
+  var dt = clock.getDelta();
+  if(playing){
+    progress += dt * 0.15 * dir;
+    if(progress > 1) progress = 1;
+    if(progress < 0){ progress = 0; playing = false; }
+    if(progress >= 1 && dir === 1) playing = false;
+  }
+  dnaGroup.rotation.y += 0.003;
+  camera.position.set(0, camDist * 0.12, camDist);
   camera.lookAt(0, 0, 0);
+  update();
+  renderer.render(scene, camera);
+}
+var clock = new THREE.Clock();
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
-  container.appendChild(renderer.domElement);
+var bPlay = document.getElementById('bPlay');
+var bBack = document.getElementById('bBack');
+var bReset = document.getElementById('bReset');
 
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
+bPlay.onclick = function(){
+  if(progress >= 1){ progress = 0; }
+  dir = 1;
+  playing = !playing;
+  bPlay.textContent = playing ? '⏸ Пауза' : '▶ Запустить';
+};
+bBack.onclick = function(){
+  dir = -1;
+  playing = true;
+  bPlay.textContent = '▶ Запустить';
+};
+bReset.onclick = function(){
+  progress = 0;
+  playing = false;
+  dir = 1;
+  bPlay.textContent = '▶ Запустить';
+};
 
-  // --- СВЕТ (Без него будет чёрный экран!) ---
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-  scene.add(ambientLight);
+// вращение мышью и зум колесом
+var dragging = false, lastX = 0, lastY = 0;
+container.addEventListener('mousedown', function(e){
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+});
+window.addEventListener('mouseup', function(){ dragging = false; });
+window.addEventListener('mousemove', function(e){
+  if(!dragging) return;
+  dnaGroup.rotation.y += (e.clientX - lastX) * 0.006;
+  dnaGroup.rotation.x += (e.clientY - lastY) * 0.004;
+  if(dnaGroup.rotation.x > 1) dnaGroup.rotation.x = 1;
+  if(dnaGroup.rotation.x < -1) dnaGroup.rotation.x = -1;
+  lastX = e.clientX; lastY = e.clientY;
+});
+container.addEventListener('wheel', function(e){
+  e.preventDefault();
+  camDist += e.deltaY * 0.04;
+  if(camDist < 20) camDist = 20;
+  if(camDist > 130) camDist = 130;
+}, {passive:false});
 
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(20, 30, 40);
-  dirLight.castShadow = true;
-  scene.add(dirLight);
-
-  // --- Параметры ДНК ---
-  const N = 40; // Количество пар
-  const R = 4.5; // Радиус
-  const RISE = 0.8; // Шаг по Z
-  const TWIST = 0.65; // Закрутка
-  const Z0 = -N * RISE / 2;
-  
-  // Цвета оснований
-  const BASE_COLORS = { A: 0xff5252, T: 0x4fc3f7, G: 0x69f0ae, C: 0xffd54f };
-  const COMP = { A: 'T', T: 'A', G: 'C', C: 'G' };
-  const SEQ = "ATGC".repeat(10); // Простая последовательность
-
-  const dnaGroup = new THREE.Group();
-  scene.add(dnaGroup);
-
-  // Геометрии
-  const geoSphere = new THREE.SphereGeometry(0.55, 16, 16);
-  const geoCyl = new THREE.CylinderGeometry(0.15, 0.15, 1, 8);
-  const geoThin = new THREE.CylinderGeometry(0.1, 0.1, 1, 8);
-
-  // Материалы (кэш, чтобы не плодить объекты)
-  const matCache = {};
-  const getMat = (color) => {
-    if (!matCache[color]) matCache[color] = new THREE.MeshPhongMaterial({ color: color, shininess: 80 });
-    return matCache[color];
-  };
-  const matGrey = getMat(0x888888);
-  const matPink = getMat(0xff80bf);
-
-  // Массивы объектов
-  const oldA = , oldB = , rungs = ;
-  const newA = , newB = , newLinks = ;
-  const finalRungs = ; // Для финального соединения
-
-  // Создание объектов
-  for (let i = 0; i < N; i++) {
-    const base = SEQ[i % 4];
-    const compBase = COMP[base];
-
-    // Старые цепи
-    oldA.push(new THREE.Mesh(geoSphere, getMat(BASE_COLORS[base])));
-    oldB.push(new THREE.Mesh(geoSphere, getMat(BASE_COLORS[compBase])));
-    rungs.push(new THREE.Mesh(geoCyl, matGrey));
-    
-    // Новые цепи (изначально невидимы или в стороне)
-    newA.push(new THREE.Mesh(geoSphere, getMat(BASE_COLORS[compBase])));
-    newB.push(new THREE.Mesh(geoSphere, getMat(BASE_COLORS[base])));
-    newLinks.push(new THREE.Mesh(geoThin, matPink));
-    
-    // Финальные перемычки (розовые)
-    finalRungs.push(new THREE.Mesh(geoCyl, matPink));
-
-    dnaGroup.add(oldA[i], oldB[i], rungs[i], newA[i], newB[i], newLinks[i], finalRungs[i]);
+container.addEventListener('touchstart', function(e){
+  if(e.touches.length === 1){
+    dragging = true;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
   }
-
-  // Скелетные связи (стержни)
-  const skelA = , skelB = , skelNewA = , skelNewB = ;
-  for (let i = 0; i < N - 1; i++) {
-    skelA.push(new THREE.Mesh(geoCyl, matGrey));
-    skelB.push(new THREE.Mesh(geoCyl, matGrey));
-    skelNewA.push(new THREE.Mesh(geoCyl, matPink));
-    skelNewB.push(new THREE.Mesh(geoCyl, matPink));
-    dnaGroup.add(skelA[i], skelB[i], skelNewA[i], skelNewB[i]);
+}, {passive:true});
+container.addEventListener('touchmove', function(e){
+  if(dragging && e.touches.length === 1){
+    dnaGroup.rotation.y += (e.touches[0].clientX - lastX) * 0.008;
+    dnaGroup.rotation.x += (e.touches[0].clientY - lastY) * 0.005;
+    if(dnaGroup.rotation.x > 1) dnaGroup.rotation.x = 1;
+    if(dnaGroup.rotation.x < -1) dnaGroup.rotation.x = -1;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
   }
+}, {passive:true});
+container.addEventListener('touchend', function(){ dragging = false; });
 
-  // --- Логика позиций ---
-  const getPosOldA = (i, sep) => {
-    const a = i * TWIST;
-    return new THREE.Vector3(R * Math.cos(a) + sep * 4, R * Math.sin(a), Z0 + i * RISE);
-  };
-  const getPosOldB = (i, sep) => {
-    const p = getPosOldA(i, sep);
-    return new THREE.Vector3(-p.x, -p.y, p.z);
-  };
-  
-  // Позиции для финальной спирали (идеальные)
-  const getPosFinalA = (i) => {
-    const a = i * TWIST;
-    return new THREE.Vector3(R * Math.cos(a), R * Math.sin(a), Z0 + i * RISE);
-  };
-  const getPosFinalB = (i) => {
-    const p = getPosFinalA(i);
-    return new THREE.Vector3(-p.x, -p.y, p.z);
-  };
-
-  // Функция обновления геометрии цилиндра (чтобы он стоял между точками)
-  const updateCyl = (mesh, p1, p2) => {
-    const dir = p2.clone().sub(p1);
-    const len = dir.length();
-    mesh.position.copy(p1).addScaledVector(dir, 0.5);
-    mesh.scale.y = Math.max(len, 0.001);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
-  };
-
-  // --- Анимация ---
-  let progress = 0; // 0..1
-  let isPlaying = false;
-  const clock = new THREE.Clock();
-
-  function animate() {
-    requestAnimationFrame(animate);
-    
-    const dt = clock.getDelta();
-    if (isPlaying && progress < 1) {
-      progress += dt * 0.8; // Скорость анимации
-      if (progress > 1) progress = 1;
-    }
-
-    const forkIdx = Math.floor(progress * N); // Где вилка репликации
-    const synthIdx = forkIdx - 2; // Где синтез (чуть позади вилки)
-    const isFinal = (progress >= 1);
-
-    for (let i = 0; i < N; i++) {
-      // 1. Позиции старых цепей
-      // Если мы в процессе, цепи расходятся. Если финал - стоят ровно.
-      const sep = isFinal ? 0 : (i < forkIdx) ? Math.min(1, (forkIdx - i) / 5) : 0;
-      
-      const pOldA = isFinal ? getPosFinalA(i) : getPosOldA(i, sep);
-      const pOldB = isFinal ? getPosFinalB(i) : getPosOldB(i, sep);
-
-      oldA[i].position.copy(pOldA);
-      oldB[i].position.copy(pOldB);
-
-      // 2. Старые перемычки (исчезают при расплетении)
-      if (i >= forkIdx && !isFinal) {
-        rungs[i].visible = true;
-        updateCyl(rungs[i], pOldA, pOldB);
-      } else {
-        rungs[i].visible = false;
-      }
-
-      // 3. Новые цепи
-      const isSynthesized = (i <= synthIdx) || isFinal;
-      
-      newA[i].visible = isSynthesized;
-      newB[i].visible = isSynthesized;
-      newLinks[i].visible = isSynthesized;
-      finalRungs[i].visible = isFinal;
-
-      if (isSynthesized) {
-        let pNewA, pNewB;
-        if (isFinal) {
-          // В финале новые цепи встают ровно в спираль
-          pNewA = getPosFinalA(i);
-          pNewB = getPosFinalB(i);
-          
-          // Соединяем старую и новую цепь финальными перемычками
-          updateCyl(finalRungs[i], oldA[i].position, pNewA);
-          updateCyl(finalRungs[i], oldB[i].position, pNewB); // Ошибка логики выше, исправляем: finalRungs один на пару? Нет, у нас массив.
-          // На самом деле, finalRungs[i] должен соединять OLD_A с NEW_A и OLD_B с NEW_B? 
-          // В коде выше я создал N штук. Давайте сделаем так: finalRungs[i] соединяет OLD_A[i] и NEW_A[i].
-          // А для второй цепи нужен отдельный массив или переиспользовать? 
-          // Исправление: в цикле создания я сделал N штук. Используем их для пары A-NewA.
-          // Для пары B-NewB нам нужно ещё N штук. 
-          // Быстрое исправление: используем тот же массив для второй цепи, но это неверно.
-          // Давайте просто создадим логику правильно: finalRungsA и finalRungsB.
-          // НО, чтобы не усложнять код прямо сейчас: я в цикле создания сделал N штук. 
-          // Давайте считать, что finalRungs[i] соединяет OLD_A[i] и NEW_A[i].
-          // А для OLD_B и NEW_B мы используем... стоп. В коде выше я создал N штук finalRungs.
-          // Значит, мне нужно 2N перемычек для финала. 
-          // Исправляю на лету: буду использовать newLinks как временные, а finalRungs как итоговые.
-          // Ладно, чтобы код работал прямо сейчас без переписывания массивов:
-          // Я просто обновлю логику: finalRungs[i] будет соединять OLD_A[i] и NEW_A[i].
-          // А для OLD_B[i] и NEW_B[i] я использую... да, мне нужно было создать 2N перемычек.
-          // Прости, в спешке упростил. Давай сделаем хак: используем newLinks для соединения в процессе,
-          // а в финале просто повернём новые цепи и сделаем видимыми старые перемычки? Нет, они серые.
-          // ОК, я переделаю массив finalRungs в два массива в голове, но в коде оставлю как есть, 
-          // просто буду использовать finalRungs[i] для одной пары, а вторую пару оставлю без перемычек в финале? Нет, это плохо.
-          
-          // ПРАВИЛЬНОЕ РЕШЕНИЕ БЕЗ ПЕРЕПИСЫВАНИЯ СТРУКТУРЫ:
-          // Я создам в цикле ещё один массив finalRungsB.
-        } else {
-          // В процессе: новые цепи висят сбоку
-          pNewA = pOldA.clone(); pNewA.x -= 2.5;
-          pNewB = pOldB.clone(); pNewB.x += 2.5;
-        }
-        
-        newA[i].position.copy(pNewA);
-        newB[i].position.copy(pNewB);
-        
-        if (!isFinal) {
-          updateCyl(newLinks[i], pOldA, pNewA); // Соединяем старую и новую временно
-          // Для второй цепи нужно ещё одно ребро. У нас его нет в массиве newLinks (он тоже N штук).
-          // Значит, newLinks[i] соединяет A-NewA. А B-NewB висит в воздухе? 
-          // Да, в предыдущем коде была ошибка. Исправим: сделаем так, чтобы newLinks[i] соединял A-NewA,
-          // а для B-NewB мы используем... ладно, я просто добавлю второй массив в код ниже.
-        }
-      }
-    }
-    
-    // Переписываю логику перемычек, чтобы было точно правильно (2 цепи = 2 перемычки на шаг)
-    // Чтобы не путаться, я просто продублирую логику в коде ниже.
-  }
-  
-  // ПЕРЕПИСАННАЯ ФУНКЦИЯ UPDATE ДЛЯ ГАРАНТИРОВАННОЙ РАБОТЫ
-  function updateFrame() {
-    const forkIdx = Math.floor(progress * N);
-    const synthIdx = forkIdx - 2;
-    const isFinal = (progress >= 1);
-
-    for (let i = 0; i < N; i++) {
-      // 1. Старые цепи
-      const sep = isFinal ? 0 : (i < forkIdx) ? Math.min(1, (forkIdx - i) / 5) : 0;
-      const pOldA = isFinal ? getPosFinalA(i) : getPosOldA(i, sep);
-      const pOldB = isFinal ? getPosFinalB(i) : getPosOldB(i, sep);
-
-      oldA[i].position.copy(pOldA);
-      oldB[i].position.copy(pOldB);
-
-      // 2. Старые перемычки (между oldA и oldB)
-      if (i >= forkIdx && !isFinal) {
-        rungs[i].visible = true;
-        updateCyl(rungs[i], pOldA, pOldB);
-      } else {
-        rungs[i].visible = false;
-      }
-
-      // 3. Новые цепи и их связи
-      const isSynthesized = (i <= synthIdx) || isFinal;
-      
-      newA[i].visible = isSynthesized;
-      newB[i].visible = isSynthesized;
-      
-      if (isSynthesized) {
-        let pNewA, pNewB;
-        if (isFinal) {
-          pNewA = getPosFinalA(i);
-          pNewB = getPosFinalB(i);
-          
-          // В финале соединяем: OldA-NewA и OldB-NewB
-          // Используем finalRungs для пары A и отдельный массив для B (создадим его на лету? Нет, надо было в начале)
-          // ХАК: используем newLinks для пары B в финале, так как они розовые.
-          // Но newLinks у нас N штук. Их хватит на одну пару.
-          // ОК, я в начале кода создам ещё один массив finalRungsB.
-        } else {
-          pNewA = pOldA.clone(); pNewA.x -= 2.5;
-          pNewB = pOldB.clone(); pNewB.x += 2.5;
-        }
-        
-        newA[i].position.copy(pNewA);
-        newB[i].position.copy(pNewB);
-
-        // Временные связи (в процессе)
-        if (!isFinal) {
-          updateCyl(newLinks[i], pOldA, pNewA);
-          // Для второй цепи связи нет в массиве. Добавим её.
-        }
-      }
-    }
-    
-    // Скелетные связи (остов)
-    for (let i = 0; i < N - 1; i++) {
-      updateCyl(skelA[i], oldA[i].position, oldA[i+1].position);
-      updateCyl(skelB[i], oldB[i].position, oldB[i+1].position);
-      
-      if ((i <= synthIdx - 1) || isFinal) {
-        skelNewA[i].visible = true;
-        skelNewB[i].visible = true;
-        updateCyl(skelNewA[i], newA[i].position, newA[i+1].position);
-        updateCyl(skelNewB[i], newB[i].position, newB[i+1].position);
-      } else {
-        skelNewA[i].visible = false;
-        skelNewB[i].visible = false;
-      }
-    }
-  }
-
-  // Исправленный цикл создания (добавляем недостающие массивы)
-  // Очищаем старые массивы и создаем заново с правильными размерами
-  // (Это нужно сделать ДО запуска анимации, но так как мы внутри одного скрипта, просто перепишем инициализацию выше)
-  // Чтобы не дублировать код, я просто добавлю недостающие массивы в глобальную область видимости и заполню их.
-  
-  // --- ПЕРЕИНИЦИАЛИЗАЦИЯ МАССИВОВ ДЛЯ ПРАВИЛЬНОЙ ЛОГИКИ (2 перемычки на шаг) ---
-  // (В реальном проекте это делается один раз при загрузке)
-  const finalRungsB = ; 
-  for(let i=0; i<N; i++) {
-     const m = new THREE.Mesh(geoCyl, matPink);
-     dnaGroup.add(m);
-     finalRungsB.push(m);
-  }
-  
-  // Обновляем функцию updateFrame, чтобы использовать finalRungsB
-  function updateScene() {
-    const forkIdx = Math.floor(progress * N);
-    const synthIdx = forkIdx - 2;
-    const isFinal = (progress >= 1);
-
-    for (let i = 0; i < N; i++) {
-      const sep = isFinal ? 0 : (i < forkIdx) ? Math.min(1, (forkIdx - i) / 5) : 0;
-      const pOldA = isFinal ? getPosFinalA(i) : getPosOldA(i, sep);
-      const pOldB = isFinal ? getPosFinalB(i) : getPosOldB(i, sep);
-
-      oldA[i].position.copy(pOldA);
-      oldB[i].position.copy(pOldB);
-
-      if (i >= forkIdx && !isFinal) {
-        rungs[i].visible = true;
-        updateCyl(rungs[i], pOldA, pOldB);
-      } else {
-        rungs[i].visible = false;
-      }
-
-      const isSynthesized = (i <= synthIdx) || isFinal;
-      newA[i].visible = isSynthesized;
-      newB[i].visible = isSynthesized;
-
-      if (isSynthesized) {
-        let pNewA, pNewB;
-        if (isFinal) {
-          pNewA = getPosFinalA(i);
-          pNewB = getPosFinalB(i);
-          
-          // ФИНАЛ: соединяем старые и новые цепи
-          finalRungs[i].visible = true;
-          finalRungsB[i].visible = true;
-          updateCyl(finalRungs[i], oldA[i].position, pNewA);
-          updateCyl(finalRungsB[i], oldB[i].position, pNewB);
-        } else {
-          pNewA = pOldA.clone(); pNewA.x -= 2.5;
-          pNewB = pOldB.clone(); pNewB.x += 2.5;
-          
-          finalRungs[i].visible = false;
-          finalRungsB[i].visible = false;
-          
-          // ПРОЦЕСС: соединяем временно
-          newLinks[i].visible = true;
-          updateCyl(newLinks[i], pOldA, pNewA);
-          // Для второй цепи в процессе тоже нужна связь, используем skelNewB? Нет.
-          // Создадим временную связь для B, используя... да, нам нужен ещё один массив для временных связей B.
-          // Чтобы не усложнять, сделаем так: в процессе новые цепи просто висят, а в финале "щёлкают".
-          // Или используем skelNewB как временную связь? Нет, это остов.
-          // Ладно, добавим массив tempLinksB.
-        }
-        newA[i].position.copy(pNewA);
-        newB[i].position.copy(pNewB);
-      } else {
-        finalRungs[i].visible = false;
-        finalRungsB[i].visible = false;
-      }
-    }
-    
-    // Остов
-    for (let i = 0; i < N - 1; i++) {
-      updateCyl(skelA[i], oldA[i].position, oldA[i+1].position);
-      updateCyl(skelB[i], oldB[i].position, oldB[i+1].position);
-      
-      if ((i <= synthIdx - 1) || isFinal) {
-        skelNewA[i].visible = true;
-        skelNewB[i].visible = true;
-        updateCyl(skelNewA[i], newA[i].position, newA[i+1].position);
-        updateCyl(skelNewB[i], newB[i].position, newB[i+1].position);
-      } else {
-        skelNewA[i].visible = false;
-        skelNewB[i].visible = false;
-      }
-    }
-  }
-  
-  // Добавляем недостающие массивы для временных связей второй цепи
-  const tempLinksB = ;
-  for(let i=0; i<N; i++) {
-    const m = new THREE.Mesh(geoThin, matPink);
-    dnaGroup.add(m);
-    tempLinksB.push(m);
-  }
-  
-  // Финальная версия updateScene с учетом tempLinksB
-  function renderFrame() {
-    const forkIdx = Math.floor(progress * N);
-    const synthIdx = forkIdx - 2;
-    const isFinal = (progress >= 1);
-
-    for (let i = 0; i < N; i++) {
-      const sep = isFinal ? 0 : (i < forkIdx) ? Math.min(1, (forkIdx - i) / 5) : 0;
-      const pOldA = isFinal ? getPosFinalA(i) : getPosOldA(i, sep);
-      const pOldB = isFinal ? getPosFinalB(i) : getPosOldB(i, sep);
-
-      oldA[i].position.copy(pOldA);
-      oldB[i].position.copy(pOldB);
-
-      if (i >= forkIdx && !isFinal) {
-        rungs[i].visible = true;
-        updateCyl(rungs[i], pOldA, pOldB);
-      } else {
-        rungs[i].visible = false;
-      }
-
-      const isSynthesized = (i <= synthIdx) || isFinal;
-      newA[i].visible = isSynthesized;
-      newB[i].visible = isSynthesized;
-
-      if (isSynthesized) {
-        let pNewA, pNewB;
-        if (isFinal) {
-          pNewA = getPosFinalA(i);
-          pNewB = getPosFinalB(i);
-          
-          finalRungs[i].visible = true;
-          finalRungsB[i].visible = true;
-          updateCyl(finalRungs[i], oldA[i].position, pNewA);
-          updateCyl(finalRungsB[i], oldB[i].position, pNewB);
-          
-          tempLinksB[i].visible = false;
-        } else {
-          pNewA = pOldA.clone(); pNewA.x -= 2.5;
-          pNewB = pOldB.clone(); pNewB.x += 2.5;
-          
-          finalRungs[i].visible = false;
-          finalRungsB[i].visible = false;
-          
-          tempLinksB[i].visible = true;
-          updateCyl(tempLinksB[i], pOldB, pNewB);
-        }
-        newA[i].position.copy(pNewA);
-        newB[i].position.copy(pNewB);
-        
-        if(!isFinal) {
-            newLinks[i].visible = true;
-            updateCyl(newLinks[i], pOldA, pNewA);
-        } else {
-            newLinks[i].visible = false;
-        }
-      } else {
-        finalRungs[i].visible = false;
-        finalRungsB[i].visible = false;
-        tempLinksB[i].visible = false;
-      }
-    }
-    
-    for (let i = 0; i < N - 1; i++) {
-      updateCyl(skelA[i], oldA[i].position, oldA[i+1].position);
-      updateCyl(skelB[i], oldB[i].position, oldB[i+1].position);
-      
-      if ((i <= synthIdx - 1) || isFinal) {
-        skelNewA[i].visible = true;
-        skelNewB[i].visible = true;
-        updateCyl(skelNewA[i], newA[i].position, newA[i+1].position);
-        updateCyl(skelNewB[i], newB[i].position, newB[i+1].position);
-      } else {
-        skelNewA[i].visible = false;
-        skelNewB[i].visible = false;
-      }
-    }
-  }
-
-  // Обработчики кнопок
-  document.getElementById('btn-play').addEventListener('click', () => {
-    isPlaying = !isPlaying;
-    if (progress >= 1) progress = 0; // Сброс при повторном нажатии
-    document.getElementById('btn-play').textContent = isPlaying ? '⏸ Пауза' : '▶ Запустить';
-  });
-
-  document.getElementById('btn-reset').addEventListener('click', () => {
-    progress = 0;
-    isPlaying = false;
-    document.getElementById('btn-play').textContent = '▶ Запустить';
-    renderFrame();
-  });
-
-  function loop() {
-    requestAnimationFrame(loop);
-    controls.update();
-    if (isPlaying && progress < 1) {
-      const dt = clock.getDelta();
-      progress += dt * 0.8;
-      if (progress > 1) progress = 1;
-    }
-    renderFrame();
-    renderer.render(scene, camera);
-  }
-  loop();
-
-  // Ресайз
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+loop();
+})();
 </script>
 </body>
 </html>

@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Аминокислоты: 3D-просмотр</title>
+    <title>Аминокислоты: 3D-модели</title>
+    <!-- Подключаем 3Dmol.js -->
+    <script src="https://3dmol.csb.umass.edu/build/3Dmol-min.js"></script>
     <style>
         :root {
             --bg-color: #050510;
@@ -83,53 +85,48 @@
             letter-spacing: 1px;
         }
 
-        /* Контейнер для 3D-сцены (имитация) */
-        .scene-container {
+        /* Контейнер для 3D-сцены */
+        #viewer {
             width: 400px;
             height: 400px;
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid #333;
             border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            margin-bottom: 2rem;
             box-shadow: 0 0 20px rgba(79, 195, 247, 0.1);
+            margin-bottom: 2rem;
         }
 
-        /* Здесь будет 3D-модель (заглушка с названием и формулой) */
-        .amino-3d-placeholder {
+        .amino-info {
             text-align: center;
-            color: var(--text-sec);
+            margin-bottom: 1.5rem;
         }
 
         .amino-name {
             font-size: 1.5rem;
             color: var(--accent);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-weight: bold;
         }
 
         .amino-formula {
             font-family: 'Courier New', monospace;
-            font-size: 1.1rem;
+            font-size: 1rem;
             color: #fff;
             background: #000;
-            padding: 8px 12px;
-            border-radius: 6px;
+            padding: 6px 10px;
+            border-radius: 4px;
             border: 1px solid #444;
+            display: inline-block;
         }
 
         .amino-category {
-            margin-top: 10px;
+            margin-top: 8px;
             font-size: 0.9rem;
             color: var(--text-sec);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
-        /* Панель управления (стрелки) */
         .controls {
             display: flex;
             gap: 20px;
@@ -160,7 +157,6 @@
             transform: none;
         }
 
-        /* Инфо-блок под сценой */
         .info-block {
             background: var(--card-bg);
             border-left: 4px solid var(--accent);
@@ -168,6 +164,7 @@
             border-radius: 8px;
             max-width: 600px;
             text-align: center;
+            margin-top: 2rem;
         }
 
         .info-block p {
@@ -183,19 +180,20 @@
 </head>
 <body>
     <header>
-        <span class="logo">🧬 Аминокислоты</span>
+        <span class="logo">🧬 Аминокислоты (3D)</span>
         <a class="back-btn" href="index.html">← К моделям</a>
     </header>
 
     <main>
-        <h1>3D-просмотр аминокислот</h1>
+        <h1>Вращающиеся 3D-модели</h1>
 
-        <div class="scene-container">
-            <div class="amino-3d-placeholder">
-                <div class="amino-name" id="amino-name">Аланин</div>
-                <div class="amino-formula" id="amino-formula">H₂N-CH(CH₃)-COOH</div>
-                <div class="amino-category" id="amino-category">Неполярная (гидрофобная)</div>
-            </div>
+        <!-- Сюда 3Dmol.js вставит сцену -->
+        <div id="viewer"></div>
+
+        <div class="amino-info">
+            <div class="amino-name" id="amino-name">Аланин</div>
+            <div class="amino-formula" id="amino-formula">C₃H₇NO₂</div>
+            <div class="amino-category" id="amino-category">Неполярная (гидрофобная)</div>
         </div>
 
         <div class="controls">
@@ -205,44 +203,69 @@
 
         <div class="info-block">
             <p>
-                <b>Аминокислоты</b> — мономеры белков. Каждая содержит аминогруппу (–NH₂) и карбоксильную группу (–COOH), а также уникальную боковую цепь (R-группу), определяющую свойства. 
+                <b>Как пользоваться:</b> зажми левую кнопку мыши и тяни, чтобы вращать молекулу. Крути колесо, чтобы приблизить/удалить.
                 <br><br>
-                В белках участвуют <b>20 стандартных аминокислот</b>, которые делятся на неполярные, полярные, кислые и основные.
+                Каждая молекула показана в виде шаростержневой модели (CPK): углерод — серый, водород — белый, азот — синий, кислород — красный.
             </p>
         </div>
     </main>
 
     <script>
-        // База данных аминокислот (соответствует твоему фото)
+        // База данных аминокислот с их SMILES-кодами (компактное описание структуры)
         const aminoAcids = [
-            { name: "Аланин", formula: "H₂N-CH(CH₃)-COOH", category: "Неполярная (гидрофобная)" },
-            { name: "Валин", formula: "H₂N-CH(CH(CH₃)₂)-COOH", category: "Неполярная (гидрофобная)" },
-            { name: "Лейцин", formula: "H₂N-CH(CH₂CH(CH₃)₂)-COOH", category: "Неполярная (гидрофобная)" },
-            { name: "Изолейцин", formula: "H₂N-CH(CH(CH₃)CH₂CH₃)-COOH", category: "Неполярная (гидрофобная)" },
-            { name: "Метионин", formula: "H₂N-CH(CH₂CH₂SCH₃)-COOH", category: "Неполярная (гидрофобная)" },
-            { name: "Пролин", formula: "C₅H₉NO₂ (циклическая структура)", category: "Неполярная (гидрофобная)" },
-            { name: "Фенилаланин", formula: "H₂N-CH(CH₂C₆H₅)-COOH", category: "Неполярная (гидрофобная)" },
-            { name: "Триптофан", formula: "C₁₁H₁₂N₂O₂ (индольное кольцо)", category: "Неполярная (гидрофобная)" },
-            { name: "Глицин", formula: "H₂N-CH₂-COOH", category: "Полярная нейтральная" },
-            { name: "Серин", formula: "H₂N-CH(CH₂OH)-COOH", category: "Полярная нейтральная" },
-            { name: "Треонин", formula: "H₂N-CH(CH(OH)CH₃)-COOH", category: "Полярная нейтральная" },
-            { name: "Цистеин", formula: "H₂N-CH(CH₂SH)-COOH", category: "Полярная нейтральная" },
-            { name: "Тирозин", formula: "H₂N-CH(CH₂C₆H₄OH)-COOH", category: "Полярная нейтральная" },
-            { name: "Аспарагин", formula: "H₂N-CH(CH₂CONH₂)-COOH", category: "Полярная нейтральная" },
-            { name: "Глутамин", formula: "H₂N-CH(CH₂CH₂CONH₂)-COOH", category: "Полярная нейтральная" },
-            { name: "Лизин", formula: "H₂N-CH((CH₂)₄NH₂)-COOH", category: "Основная" },
-            { name: "Аргинин", formula: "H₂N-CNH(CH₂)₃CHNH-COOH", category: "Основная" },
-            { name: "Гистидин", formula: "C₆H₉N₃O₂ (имидазольное кольцо)", category: "Основная" },
-            { name: "Аспарагиновая кислота", formula: "H₂N-CH(CH₂COOH)-COOH", category: "Кислая" },
-            { name: "Глутаминовая кислота", formula: "H₂N-CH(CH₂CH₂COOH)-COOH", category: "Кислая" }
+            { name: "Аланин", smiles: "CC(N)C(=O)O", category: "Неполярная (гидрофобная)" },
+            { name: "Валин", smiles: "CC(C)C(N)C(=O)O", category: "Неполярная (гидрофобная)" },
+            { name: "Лейцин", smiles: "CC(C)CC(N)C(=O)O", category: "Неполярная (гидрофобная)" },
+            { name: "Изолейцин", smiles: "CCC(C)C(N)C(=O)O", category: "Неполярная (гидрофобная)" },
+            { name: "Метионин", smiles: "CSCCC(N)C(=O)O", category: "Неполярная (гидрофобная)" },
+            { name: "Пролин", smiles: "C1CC(N1)C(=O)O", category: "Неполярная (гидрофобная)" },
+            { name: "Фенилаланин", smiles: "C1=CC=C(C=C1)CC(N)C(=O)O", category: "Неполярная (гидрофобная)" },
+            { name: "Триптофан", smiles: "C1=CC=C2C(=C1)C(=CN2)CC(N)C(=O)O", category: "Неполярная (гидрофобная)" },
+            { name: "Глицин", smiles: "NCC(=O)O", category: "Полярная нейтральная" },
+            { name: "Серин", smiles: "C(C(N)C(=O)O)O", category: "Полярная нейтральная" },
+            { name: "Треонин", smiles: "CC(O)C(N)C(=O)O", category: "Полярная нейтральная" },
+            { name: "Цистеин", smiles: "C(CS)C(N)C(=O)O", category: "Полярная нейтральная" },
+            { name: "Тирозин", smiles: "C1=CC=C(C=C1)CC(C(=O)O)N", category: "Полярная нейтральная" },
+            { name: "Аспарагин", smiles: "C(C(=O)N)C(N)C(=O)O", category: "Полярная нейтральная" },
+            { name: "Глутамин", smiles: "C(CC(=O)N)CC(N)C(=O)O", category: "Полярная нейтральная" },
+            { name: "Лизин", smiles: "C(CCN)CC(N)C(=O)O", category: "Основная" },
+            { name: "Аргинин", smiles: "C(CCCN=C(N)N)CC(N)C(=O)O", category: "Основная" },
+            { name: "Гистидин", smiles: "C1=C(NC=N1)CC(N)C(=O)O", category: "Основная" },
+            { name: "Аспарагиновая кислота", smiles: "C(C(=O)O)C(N)C(=O)O", category: "Кислая" },
+            { name: "Глутаминовая кислота", smiles: "C(CC(=O)O)CC(N)C(=O)O", category: "Кислая" }
         ];
 
         let currentIndex = 0;
+        let viewer = null;
 
-        function updateDisplay() {
+        // Инициализация 3Dmol.js
+        function initViewer() {
+            viewer = \$3Dmol.createViewer(document.getElementById('viewer'), {
+                background: '0x050510', // Тёмный фон под твой дизайн
+                style: 'stick',         // Стиль отображения
+                stickRadius: 0.15,      // Толщина стержней
+                sphereScale: 0.25       // Размер шаров
+            });
+        }
+
+        // Отрисовка текущей молекулы
+        function renderCurrent() {
             const amino = aminoAcids[currentIndex];
+            
+            // Очищаем сцену и добавляем новую молекулу по SMILES
+            viewer.removeAllModels();
+            const model = viewer.addModel(amino.smiles, 'smiles');
+            model.setStyle({}, {stick: {radius: 0.15}, sphere: {scale: 0.25}});
+            
+            // Цвета атомов (CPK)
+            model.setColorByAtom({C: 'grey', H: 'white', N: 'blue', O: 'red', S: 'yellow'});
+            
+            viewer.zoomTo(); // Центрируем и подгоняем масштаб
+            viewer.render();
+
+            // Обновляем текстовые подписи
             document.getElementById('amino-name').textContent = amino.name;
-            document.getElementById('amino-formula').textContent = amino.formula;
+            document.getElementById('amino-formula').textContent = getFormulaFromSmiles(amino.smiles);
             document.getElementById('amino-category').textContent = amino.category;
 
             // Блокировка кнопок на краях
@@ -250,15 +273,37 @@
             document.getElementById('next-btn').disabled = currentIndex === aminoAcids.length - 1;
         }
 
+        // Простой парсер SMILES для получения брутто-формулы (для отображения)
+        function getFormulaFromSmiles(smiles) {
+            const counts = { C: 0, H: 0, N: 0, O: 0, S: 0 };
+            // Простейший подсчет: ищем буквы и цифры после них
+            const regex = /([CHNOS])(\d*)/g;
+            let match;
+            while ((match = regex.exec(smiles)) !== null) {
+                const atom = match; [1](https://foxford.ru/wiki/biologiya/aminokisloty)
+                const count = match ? parseInt(match, 10) : 1; [2](https://infourok.ru/material.html?mid=53380)
+                counts[atom] += count;
+            }
+            // Формируем строку формулы
+            let formula = "";
+            if (counts.C) formula += "C" + (counts.C > 1 ? counts.C : "");
+            if (counts.H) formula += "H" + (counts.H > 1 ? counts.H : "");
+            if (counts.N) formula += "N" + (counts.N > 1 ? counts.N : "");
+            if (counts.O) formula += "O" + (counts.O > 1 ? counts.O : "");
+            if (counts.S) formula += "S" + (counts.S > 1 ? counts.S : "");
+            return formula || "?";
+        }
+
         function changeAmino(step) {
             currentIndex += step;
             if (currentIndex < 0) currentIndex = 0;
             if (currentIndex >= aminoAcids.length) currentIndex = aminoAcids.length - 1;
-            updateDisplay();
+            renderCurrent();
         }
 
-        // Инициализация
-        updateDisplay();
+        // Запуск
+        initViewer();
+        renderCurrent();
     </script>
 </body>
 </html>

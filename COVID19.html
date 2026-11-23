@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вирус COVID-19 в 3D</title>
+<style>
+:root{--bg:#0f172a;--panel:#1e293b;--accent:#38bdf8;--text:#f1f5f9;--sec:#94a3b8;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',Roboto,Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--panel);border-bottom:1px solid #334155;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:bold;color:var(--accent)}
+.back{padding:8px 16px;border:1px solid #444;border-radius:20px;color:var(--text);text-decoration:none;font-size:14px}
+.back:hover{background:var(--accent);color:#000}
+main{flex:1;max-width:1000px;margin:0 auto;width:100%;padding:16px;display:flex;flex-direction:column;align-items:center}
+h1{color:var(--accent);font-size:22px;text-align:center}
+#scene{width:100%;max-width:900px;height:480px;border:1px solid #334155;border-radius:12px;background:#050510;overflow:hidden;cursor:grab}
+#scene:active{cursor:grabbing}
+.controls{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap;justify-content:center}
+.ctrl{padding:11px 22px;border:1px solid rgba(56,189,248,.4);background:rgba(255,255,255,.05);color:var(--accent);cursor:pointer;border-radius:8px;font-size:14px;font-weight:bold}
+.ctrl:hover{background:var(--accent);color:#000}
+.legend{background:rgba(255,255,255,.05);border-left:4px solid var(--accent);padding:12px 16px;border-radius:8px;max-width:780px;color:var(--sec);font-size:13px;margin-top:10px;text-align:center}
+.legend b{color:var(--accent)}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin:0 3px;vertical-align:middle}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:20px;width:100%}
+.card{background:var(--panel);border:1px solid #334155;border-radius:10px;padding:16px}
+.card h3{color:var(--accent);margin:0 0 8px;font-size:16px}
+.card p{margin:0;color:var(--sec);font-size:13px;line-height:1.6}
+.card ul{margin:6px 0 0;padding-left:18px;color:var(--sec);font-size:13px;line-height:1.6}
+.card li{margin-bottom:4px}
+</style>
+</head>
+<body>
+<header>
+<span class="logo">🦠 Вирус COVID-19</span>
+<a class="back" href="index.html">← К моделям</a>
+</header>
+<main>
+<h1>Вирус SARS-CoV-2 (COVID-19) в 3D</h1>
+<div id="scene"></div>
+<div class="controls">
+<button class="ctrl" id="bSpin">⏸ Остановить вращение</button>
+<button class="ctrl" id="bRNA">🔍 Показать РНК</button>
+</div>
+<div class="legend">
+<b>Обозначения:</b>
+<span class="dot" style="background:#ff5252"></span>S-белки (шипы) — распознают рецепторы клеток,
+<span class="dot" style="background:#69f0ae"></span>М-белки — мелкие бугорки на оболочке,
+<span class="dot" style="background:#8899bb"></span>липидная оболочка (полупрозрачная),
+<span class="dot" style="background:#ba68c8"></span>РНК — геном вируса внутри.<br>
+Вращение — левой кнопкой мыши, зум — колёсиком.
+</div>
+
+<div class="cards">
+<div class="card">
+<h3>Что это за вирус</h3>
+<p>Коронавирусы получили название из-за булавовидных шипов на поверхности — под электронным микроскопом вирион похож на солнечную корону. SARS-CoV-2 — оболочечный вирус с одноцепочечной РНК (+РНК) положительной полярности.</p>
+</div>
+<div class="card">
+<h3>Строение вириона</h3>
+<ul>
+<li><b>S-белок (шип):</b> связывается с рецептором АПФ2 на клетке человека.</li>
+<li><b>E и М белки:</b> формируют и стабилизируют оболочку.</li>
+<li><b>N-белок:</b> упаковывает РНК в спиральный рибонуклеопротеид.</li>
+<li><b>Геном:</b> одна молекула РНК (~30 тыс. нуклеотидов) — крупнейший геном среди РНК-вирусов.</li>
+</ul>
+</div>
+<div class="card">
+<h3>Жизненный цикл</h3>
+<ul>
+<li>1. Шип S связывается с АПФ2, вирус сливается с мембраной.</li>
+<li>2. РНК выходит в цитоплазму и сразу транслируется клеточными рибосомами.</li>
+<li>3. Синтезируются репликазные белки — вирус копирует свой геном.</li>
+<li>4. Собираются новые вирионы, они покидают клетку с оболочкой из её мембраны.</li>
+</ul>
+</div>
+</div>
+</main>
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script>
+(function(){
+var container = document.getElementById('scene');
+var statusFallback = 'Библиотека 3D не загрузилась — проверь интернет и обнови страницу (Ctrl+F5)';
+
+var scene, camera, renderer, virusGroup, rnaGroup;
+try{
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x050510);
+}catch(e){
+  container.innerHTML = '<p style="color:#ff5252;padding:20px">'+statusFallback+'</p>';
+  return;
+}
+if(typeof THREE === 'undefined'){
+  container.innerHTML = '<p style="color:#ff5252;padding:20px">'+statusFallback+'</p>';
+  return;
+}
+
+camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+var camDist = 30;
+camera.position.set(0, 4, camDist);
+camera.lookAt(0, 0, 0);
+
+renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+container.appendChild(renderer.domElement);
+
+function fit(){
+  var w = container.clientWidth, h = container.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+fit();
+window.addEventListener('resize', fit);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+var dl = new THREE.DirectionalLight(0xffffff, 0.9);
+dl.position.set(20, 30, 40);
+scene.add(dl);
+var dl2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dl2.position.set(-30, -20, -30);
+scene.add(dl2);
+
+virusGroup = new THREE.Group();
+scene.add(virusGroup);
+
+var ENV_R = 6.5;
+
+// --- оболочка ---
+var envelope = new THREE.Mesh(
+  new THREE.SphereGeometry(ENV_R, 48, 48),
+  new THREE.MeshPhongMaterial({color:0x8899bb, transparent:true, opacity:0.35, shininess:60})
+);
+virusGroup.add(envelope);
+
+// --- шипы S-белков (распределение по сфере) ---
+var spikeGeo = new THREE.CylinderGeometry(0.18, 0.28, 2.6, 8);
+var headGeo = new THREE.SphereGeometry(0.75, 12, 12);
+var spikeMat = new THREE.MeshPhongMaterial({color:0xff5252, shininess:70});
+var UP = new THREE.Vector3(0, 1, 0);
+var nSpikes = 70;
+
+for(var i = 0; i < nSpikes; i++){
+  var y = 1 - (i / (nSpikes - 1)) * 2;
+  var rad = Math.sqrt(Math.max(0, 1 - y * y));
+  var theta = i * 2.39996;
+  var dir = new THREE.Vector3(Math.cos(theta) * rad, y, Math.sin(theta) * rad);
+
+  var stalk = new THREE.Mesh(spikeGeo, spikeMat);
+  stalk.position.copy(dir).multiplyScalar(ENV_R + 1.2);
+  stalk.quaternion.setFromUnitVectors(UP, dir);
+  virusGroup.add(stalk);
+
+  var head = new THREE.Mesh(headGeo, spikeMat);
+  head.position.copy(dir).multiplyScalar(ENV_R + 2.6);
+  virusGroup.add(head);
+}
+
+// --- М-белки (мелкие бугорки на оболочке) ---
+var mGeo = new THREE.SphereGeometry(0.4, 10, 10);
+var mMat = new THREE.MeshPhongMaterial({color:0x69f0ae, shininess:40});
+for(var i = 0; i < 40; i++){
+  var y = 1 - (i / 39) * 2;
+  var rad = Math.sqrt(Math.max(0, 1 - y * y));
+  var theta = i * 2.39996 + 1.2;
+  var dir = new THREE.Vector3(Math.cos(theta) * rad, y, Math.sin(theta) * rad);
+  var m = new THREE.Mesh(mGeo, mMat);
+  m.position.copy(dir).multiplyScalar(ENV_R + 0.15);
+  virusGroup.add(m);
+}
+
+// --- РНК внутри (спираль) ---
+rnaGroup = new THREE.Group();
+rnaGroup.visible = false;
+virusGroup.add(rnaGroup);
+
+var rnaGeo = new THREE.SphereGeometry(0.28, 8, 8);
+var rnaMat = new THREE.MeshPhongMaterial({color:0xba68c8, shininess:80});
+var nucGeo = new THREE.SphereGeometry(0.36, 10, 10);
+var nucMat = new THREE.MeshPhongMaterial({color:0xffd54f, shininess:80});
+var rnaPts = [];
+var rnaTurns = 5;
+var rnaN = 90;
+for(var i = 0; i < rnaN; i++){
+  var t = i / (rnaN - 1);
+  var ang = t * rnaTurns * Math.PI * 2;
+  var px = Math.cos(ang) * 2.2;
+  var pz = Math.sin(ang) * 2.2;
+  var py = -5 + t * 10;
+  var p = new THREE.Vector3(px, py, pz);
+  rnaPts.push(p);
+  var s = new THREE.Mesh(rnaGeo, rnaMat);
+  s.position.copy(p);
+  rnaGroup.add(s);
+  if(i % 8 === 4){
+    var n = new THREE.Mesh(nucGeo, nucMat);
+    n.position.copy(p);
+    rnaGroup.add(n);
+  }
+}
+var linkGeo = new THREE.CylinderGeometry(0.1, 0.1, 1, 6);
+var linkMat = new THREE.MeshPhongMaterial({color:0xba68c8});
+for(var i = 0; i < rnaPts.length - 1; i++){
+  var l = new THREE.Mesh(linkGeo, linkMat);
+  var p1 = rnaPts[i], p2 = rnaPts[i + 1];
+  var d = new THREE.Vector3().subVectors(p2, p1);
+  l.position.copy(p1).addScaledVector(d, 0.5);
+  l.scale.y = Math.max(d.length(), 0.001);
+  d.normalize();
+  l.quaternion.setFromUnitVectors(UP, d);
+  rnaGroup.add(l);
+}
+
+// --- управление ---
+var autoRotate = true;
+var dragging = false, lastX = 0, lastY = 0;
+
+container.addEventListener('mousedown', function(e){
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+});
+window.addEventListener('mouseup', function(){ dragging = false; });
+window.addEventListener('mousemove', function(e){
+  if(!dragging) return;
+  virusGroup.rotation.y += (e.clientX - lastX) * 0.006;
+  virusGroup.rotation.x += (e.clientY - lastY) * 0.004;
+  if(virusGroup.rotation.x > 1) virusGroup.rotation.x = 1;
+  if(virusGroup.rotation.x < -1) virusGroup.rotation.x = -1;
+  lastX = e.clientX; lastY = e.clientY;
+});
+container.addEventListener('wheel', function(e){
+  e.preventDefault();
+  camDist += e.deltaY * 0.03;
+  if(camDist < 12) camDist = 12;
+  if(camDist > 70) camDist = 70;
+}, {passive:false});
+
+container.addEventListener('touchstart', function(e){
+  if(e.touches.length === 1){
+    dragging = true;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+  }
+}, {passive:true});
+container.addEventListener('touchmove', function(e){
+  if(dragging && e.touches.length === 1){
+    virusGroup.rotation.y += (e.touches[0].clientX - lastX) * 0.008;
+    virusGroup.rotation.x += (e.touches[0].clientY - lastY) * 0.005;
+    if(virusGroup.rotation.x > 1) virusGroup.rotation.x = 1;
+    if(virusGroup.rotation.x < -1) virusGroup.rotation.x = -1;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+  }
+}, {passive:true});
+container.addEventListener('touchend', function(){ dragging = false; });
+
+var bSpin = document.getElementById('bSpin');
+var bRNA = document.getElementById('bRNA');
+bSpin.onclick = function(){
+  autoRotate = !autoRotate;
+  bSpin.textContent = autoRotate ? '⏸ Остановить вращение' : '▶ Включить вращение';
+};
+bRNA.onclick = function(){
+  rnaGroup.visible = !rnaGroup.visible;
+  bRNA.textContent = rnaGroup.visible ? '🔍 Скрыть РНК' : '🔍 Показать РНК';
+};
+
+function loop(){
+  requestAnimationFrame(loop);
+  if(autoRotate) virusGroup.rotation.y += 0.005;
+  camera.position.set(0, 4, camDist);
+  camera.lookAt(0, 0, 0);
+  renderer.render(scene, camera);
+}
+loop();
+})();
+</script>
+</body>
+</html>

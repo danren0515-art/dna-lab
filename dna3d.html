@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ДНК: 3D и репликация</title>
+<script src="https://cdn.jsdelivr.net/npm/3dmol@2.0.5/build/3Dmol-min.js"></script>
+<style>
+:root{--bg:#050510;--panel:#111122;--accent:#4fc3f7;--text:#e0e0e0;--sec:#a0a0b0;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{position:sticky;top:0;background:var(--panel);border-bottom:1px solid #333;padding:12px 20px;z-index:100;display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:bold;color:var(--accent);letter-spacing:1px}
+.back{padding:8px 16px;border:1px solid #444;border-radius:20px;color:var(--text);text-decoration:none;font-size:14px}
+.back:hover{background:var(--accent);color:#000}
+main{flex:1;max-width:1100px;margin:0 auto;width:100%;padding:20px;display:flex;flex-direction:column;align-items:center}
+h1{color:var(--accent);font-size:24px;text-align:center}
+
+/* 3D-сцена */
+#viewer{width:100%;height:400px;max-width:95vw;position:relative;border:1px solid #333;border-radius:12px;background:rgba(0,0,0,.3);box-shadow:0 0 20px rgba(79,195,247,.15);margin-bottom:16px}
+#status{position:absolute;bottom:8px;left:12px;font-size:12px;color:#888}
+
+/* Карточки стадий репликации */
+.steps-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;margin:20px 0}
+.step-card{background:rgba(255,255,255,.05);border:1px solid #2a2a3d;border-radius:10px;padding:16px;text-align:center}
+.step-num{font-size:32px;color:var(--accent);font-weight:bold;line-height:1}
+.step-title{color:var(--accent);font-weight:bold;margin:8px 0}
+.step-desc{color:var(--sec);font-size:13px;line-height:1.5}
+
+/* Схема цепей */
+.chain-legend{background:rgba(255,255,255,.05);border-left:4px solid var(--accent);padding:16px;border-radius:8px;max-width:700px;color:var(--sec);margin-top:20px}
+.chain-legend b{color:var(--accent)}
+.chain-box{display:inline-block;width:12px;height:12px;border-radius:4px;margin:0 4px}
+.chain-old{background:#4fc3f7}
+.chain-new{background:#e57373}
+
+.controls{display:flex;gap:16px;margin:16px 0}
+.nav-btn{padding:12px 26px;border:1px solid rgba(79,195,247,.4);background:rgba(255,255,255,.05);color:var(--accent);cursor:pointer;border-radius:8px;font-size:15px;font-weight:bold;transition:.2s}
+.nav-btn:hover{background:var(--accent);color:#000}
+.nav-btn:disabled{opacity:.25;cursor:not-allowed}
+
+.hint{background:rgba(255,255,255,.05);border-left:4px solid var(--accent);padding:14px;border-radius:8px;max-width:700px;color:var(--sec);font-size:13px;text-align:center;margin-top:16px}
+</style>
+</head>
+<body>
+<header>
+<span class="logo">🧬 ДНК и репликация</span>
+<a class="back" href="index.html">← К моделям</a>
+</header>
+<main>
+<h1>3D ДНК и стадии репликации</h1>
+
+<div id="viewer"><div id="status">Загрузка ДНК...</div></div>
+
+<div class="controls">
+<button class="nav-btn" id="prev" onclick="changeStage(-1)">← Предыдущая стадия</button>
+<button class="nav-btn" id="next" onclick="changeStage(1)">Следующая стадия →</button>
+</div>
+
+<div class="steps-grid">
+<div class="step-card">
+<div class="step-num">1</div>
+<div class="step-title">До репликации</div>
+<div class="step-desc">Замкнутая двойная спираль. Обе цепи — исходные (родительские). Водородные связи между азотистыми основаниями удерживают цепи вместе.</div>
+</div>
+<div class="step-card">
+<div class="step-num">2</div>
+<div class="step-title">В процессе репликации</div>
+<div class="step-desc">Хеликаза расплетает спираль, образуя репликационную вилку. На одной цепи синтез идёт непрерывно (лидирующая), на другой — фрагментами Оказаки (отстающая).</div>
+</div>
+<div class="step-card">
+<div class="step-num">3</div>
+<div class="step-title">После репликации</div>
+<div class="step-desc">Образовались две идентичные двойные спирали. Каждая содержит одну старую и одну новую цепь (полуконсервативный механизм).</div>
+</div>
+</div>
+
+<div class="chain-legend">
+<b>Как читать схему:</b> в 3D-модели старые цепи будут <span class="chain-box chain-old"></span> голубыми, новые — <span class="chain-box chain-new"></span> розовыми. Синтез новой цепи всегда идёт в направлении 5'→3', а матрица читается 3'→5'.
+</div>
+
+<div class="hint">
+<b>Управление 3D:</b> вращай молекулу левой кнопкой мыши, приближай — колёсиком, сдвигай — правой кнопкой.
+</div>
+</main>
+
+<script>
+var stages = [
+{
+  title: "До репликации",
+  desc: "Замкнутая двойная спираль. Обе цепи — исходные (родительские). Водородные связи между азотистыми основаниями удерживают цепи вместе.",
+  dna: "ATGCATGC" // короткая последовательность для примера
+},
+{
+  title: "В процессе репликации",
+  desc: "Хеликаза расплетает спираль, образуя репликационную вилку. На одной цепи синтез идёт непрерывно (лидирующая), на другой — фрагментами Оказаки (отстающая).",
+  dna: "ATGCATGC"
+},
+{
+  title: "После репликации",
+  desc: "Образовались две идентичные двойные спирали. Каждая содержит одну старую и одну новую цепь (полуконсервативный механизм).",
+  dna: "ATGCATGC"
+}
+];
+
+var currentStage = 0;
+var viewer = null;
+var loading = false;
+
+function initViewer(){
+  viewer = \$3Dmol.createViewer(document.getElementById('viewer'), {
+    backgroundColor: '#050510'
+  });
+}
+
+// Генерируем простую 3D-структуру ДНК (двойная спираль)
+function renderDna(stageIndex){
+  if(loading) return;
+  loading = true;
+  document.getElementById('status').textContent = 'Построение модели ДНК...';
+  document.getElementById('status').style.color = '#4fc3f7';
+
+  viewer.clear();
+
+  // Для простоты рисуем две цепи как спирали
+  // Цепь 1 (старая) — голубая
+  // Цепь 2 (новая) — розовая (на разных стадиях цвет меняется)
+  
+  var oldColor = "0x4fc3f7"; // голубой
+  var newColor = "0xe57373"; // розовый
+
+  // Рисуем две спирали (упрощённо — как трубки)
+  // В реальной библиотеке можно загрузить PDB, но для анимации лучше генерировать
+  
+  // Добавляем две цепи ДНК (упрощённая модель)
+  var model = viewer.addModel(undefined, 'pdb');
+  
+  // Генерируем атомы для двух цепей (упрощённо)
+  // Цепь 1: старая
+  for(var i=0; i<10; i++){
+    model.addAtom({serial: i, name: 'C', resn: 'DA', chain: 'A', x: Math.cos(i*0.5)*10, y: Math.sin(i*0.5)*10, z: i*3, element: 'C', color: oldColor});
+  }
+  // Цепь 2: новая (на разных стадиях показываем по-разному)
+  for(var i=0; i<10; i++){
+    model.addAtom({serial: i+10, name: 'C', resn: 'DA', chain: 'B', x: Math.cos(i*0.5+3.14)*10, y: Math.sin(i*0.5+3.14)*10, z: i*3, element: 'C', color: (stageIndex === 1 || stageIndex === 2) ? newColor : oldColor});
+  }
+
+  // Стилизуем как спирали
+  viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+  // Переопределяем цвета для наглядности
+  viewer.setStyle({chain: 'A'}, {cartoon: {color: oldColor}});
+  viewer.setStyle({chain: 'B'}, {cartoon: {color: (stageIndex === 1 || stageIndex === 2) ? newColor : oldColor}});
+
+  // Добавляем "основания" (упрощённо как сферы)
+  for(var i=0; i<10; i++){
+    viewer.addSphere({center: {x: Math.cos(i*0.5)*12, y: Math.sin(i*0.5)*12, z: i*3}, radius: 1.5, color: oldColor});
+    viewer.addSphere({center: {x: Math.cos(i*0.5+3.14)*12, y: Math.sin(i*0.5+3.14)*12, z: i*3}, radius: 1.5, color: (stageIndex === 1 || stageIndex === 2) ? newColor : oldColor});
+  }
+
+  viewer.zoomTo();
+  viewer.render();
+  loading = false;
+  document.getElementById('status').textContent = 'Вращай модель, смотри стадии';
+  document.getElementById('status').style.color = '#4fc3f7';
+}
+
+function updateStageInfo(idx){
+  // Здесь можно обновлять текст, но у нас он статичен в HTML
+  document.getElementById('prev').disabled = (idx === 0);
+  document.getElementById('next').disabled = (idx === stages.length - 1);
+}
+
+function changeStage(step){
+  var next = currentStage + step;
+  if(next < 0 || next >= stages.length) return;
+  currentStage = next;
+  renderDna(currentStage);
+  updateStageInfo(currentStage);
+}
+
+window.addEventListener('load', function(){
+  initViewer();
+  renderDna(0);
+  updateStageInfo(0);
+});
+</script>
+</body>
+</html>

@@ -191,7 +191,7 @@ let scene,camera,renderer,controls;
 let activeTab='dna',runToken=0,busy=false,speed=1,phase='idle',sceneVer=0;
 let seqStr='ATGGCCTATCGTAAAGGCTAA';
 let dnaGroup=null,mrnaGroup=null,ribGroup=null,chainGroup=null,poly=null;
-let seq=[],nodes=[],mrnaMeshes=[],mrnaLineX=[],chain=[],helixConns=[];
+let seq=[],nodes=[],mrnaMeshes=[],mrnaLineX=[],chain=[],chainBonds=[],helixConns=[];
 let trnaModel=null;
 
 const tweens=[],fibers=[],sceneLights=[];
@@ -212,11 +212,21 @@ function addCyl(parent,a,b,r,color){
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
   parent.add(m);return m;}
 
+function redrawChainBonds(){
+  if(!chainGroup)return;
+  chainBonds.forEach(b=>chainGroup.remove(b));
+  chainBonds=[];
+  for(let i=1;i<chain.length;i++)
+    chainBonds.push(addCyl(chainGroup,chain[i-1].position.clone(),
+      chain[i].position.clone(),0.09,'#ced4da'));
+}
+
 function clearAll(){
   sceneVer++;
   tweens.slice().forEach(t=>t.res());tweens.length=0;
   [...scene.children].forEach(o=>{if(!sceneLights.includes(o))scene.remove(o);});
   fibers.length=0;
+  chainBonds=[];
   dnaGroup=mrnaGroup=ribGroup=chainGroup=poly=trnaModel=null;
   nodes=[];mrnaMeshes=[];chain=[];mrnaLineX=[];helixConns=[];
 }
@@ -236,16 +246,45 @@ function updateFibers(){
   });}
 
 function makeLabel(text,scale=1){
-  const cv=document.createElement('canvas');cv.width=512;cv.height=128;
+  const meas=document.createElement('canvas').getContext('2d');
+  let fs=40;
+  meas.font='bold '+fs+'px Segoe UI, Arial';
+  let lines;
+  if(meas.measureText(text).width<=460){
+    lines=[text];
+  } else {
+    const words=text.split(' ');
+    let best=null,bestDiff=1e9;
+    for(let i=1;i<words.length;i++){
+      const a=words.slice(0,i).join(' '),b=words.slice(i).join(' ');
+      const wa=meas.measureText(a).width,wb=meas.measureText(b).width;
+      if(Math.max(wa,wb)<=460 && Math.abs(wa-wb)<bestDiff){
+        bestDiff=Math.abs(wa-wb);best=[a,b];
+      }
+    }
+    if(best){lines=best;}
+    else{
+      while(fs>20 && meas.measureText(text).width>460){
+        fs-=2;meas.font='bold '+fs+'px Segoe UI, Arial';
+      }
+      lines=[text];
+    }
+  }
+  const W=512,H=lines.length>1?200:128;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;
   const c=cv.getContext('2d');
-  c.font='bold 40px Segoe UI, Arial';
-  const w=Math.min(c.measureText(text).width+40,500);
-  c.fillStyle='rgba(8,12,28,0.8)';c.fillRect((512-w)/2,18,w,92);
-  c.strokeStyle='rgba(140,170,255,0.7)';c.strokeRect((512-w)/2,18,w,92);
+  c.font='bold '+fs+'px Segoe UI, Arial';
+  const pad=24;
+  const boxW=Math.min(Math.max(...lines.map(l=>c.measureText(l).width))+pad*2,W-4);
+  const boxH=lines.length*(fs+14)+pad;
+  c.fillStyle='rgba(8,12,28,0.8)';
+  c.fillRect((W-boxW)/2,(H-boxH)/2,boxW,boxH);
+  c.strokeStyle='rgba(140,170,255,0.7)';
+  c.strokeRect((W-boxW)/2,(H-boxH)/2,boxW,boxH);
   c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
-  c.fillText(text,256,64);
+  lines.forEach((l,i)=>c.fillText(l,W/2,H/2+(i-(lines.length-1)/2)*(fs+14)));
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
-  sp.scale.set(2.9*scale,0.72*scale,1);return sp;}
+  sp.scale.set(2.9*scale,2.9*scale*H/W,1);return sp;}
 
 function moveCam(pos,target,dur){
   const p0=camera.position.clone(),t0=controls.target.clone();
@@ -370,7 +409,7 @@ async function translate(my){
   const large=addSphere(ribGroup,new THREE.Vector3(0,1.6,0),1.15,'#1c7ed6');
   large.material.transparent=true;large.material.opacity=0.35;
   chainGroup=new THREE.Group();scene.add(chainGroup);
-  chain=[];
+  chain=[];chainBonds=[];
   const codonsN=Math.floor(seq.length/3);
   const leftover=seq.length-codonsN*3;
   for(let c=0;c<codonsN;c++){
@@ -407,7 +446,7 @@ async function translate(my){
     const slot=new THREE.Vector3(cx,-2.3,0);
     await tween(300/speed,p=>cSphere.position.lerpVectors(from,slot,p));
     if(my!==runToken)return;
-redrawChainBonds();
+    redrawChainBonds();
     await wait(150);
     if(my!==runToken)return;
     await tween(320/speed,p=>tr.position.y=0.5+5*p);
@@ -415,6 +454,7 @@ redrawChainBonds();
     scene.remove(tr);
   }
   if(my!==runToken)return;
+  redrawChainBonds();
   const txt=chain.map(m=>m.userData.aa).join('–');
   setInfoDna(leftover
     ?`Готово! Последние ${leftover} нуклеотида не образуют полный кодон. Белок: ${txt}`
@@ -640,7 +680,7 @@ function buildTRNAModel(){
   lab('D-петля',-1.9,3.0,0.8);
   lab('T-петля',-1.9,0.1,0.8);
   lab('Антикодон',1.6,-0.9,0.9);
-  setInfoTrna('Модель тРНК: акцепторный стебель с 3\u2032-концем (САА) несёт аминокислоту, внизу справа — антикодон, комплементарный кодону. Модель вращается автоматически; сцену можно крутить мышью.');
+  setInfoTrna('Модель тРНК: акцепторный стебель с 3′-концем (САА) несёт аминокислоту, внизу справа — антикодон, комплементарный кодону. Модель вращается автоматически; сцену можно крутить мышью.');
 }
 
 async function translationDemo(my){
@@ -665,7 +705,7 @@ async function translationDemo(my){
   const mP=makeLabel('P',0.7);mP.position.set(0,-1.5,0);ribGroup.add(mP);
   const mE=makeLabel('E',0.7);mE.position.set(-1.05,-1.5,0);ribGroup.add(mE);
   chainGroup=new THREE.Group();scene.add(chainGroup);
-  chain=[];
+  chain=[];chainBonds=[];
   setInfoTrna('Инициация: рибосома садится на мРНК, стартовая тРНК занимает P-участок.');
   await moveCam(new THREE.Vector3(0,4,16),new THREE.Vector3(0,0.3,0),900);
   if(my!==runToken)return;
@@ -711,7 +751,7 @@ async function translationDemo(my){
     const slot=new THREE.Vector3(targetX,-2.3,0);
     await tween(300/speed,p=>cSphere.position.lerpVectors(from,slot,p));
     if(my!==runToken)return;
-redrawChainBonds();
+    redrawChainBonds();
     await tween(380/speed,p=>{
       tr.position.x=targetX-1.05*p;
       tr.position.y=0.5+2.5*p;
@@ -722,6 +762,7 @@ redrawChainBonds();
     if(my!==runToken)return;
   }
   if(my!==runToken)return;
+  redrawChainBonds();
   const txt=chain.map(m=>m.userData.aa).join('–');
   setInfoTrna(`Белок собран (${chain.length} аминокислот): ${txt}`);
   await tween(700,p=>chainGroup.position.y=-2.2*p);

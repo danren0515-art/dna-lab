@@ -407,7 +407,7 @@ async function translate(my){
     const slot=new THREE.Vector3(cx,-2.3,0);
     await tween(300/speed,p=>cSphere.position.lerpVectors(from,slot,p));
     if(my!==runToken)return;
-    if(chain.length>1)addCyl(chainGroup,chain[chain.length-2].position.clone(),slot,0.09,'#ced4da');
+   redrawChainBonds();
     await wait(150);
     if(my!==runToken)return;
     await tween(320/speed,p=>tr.position.y=0.5+5*p);
@@ -711,7 +711,7 @@ async function translationDemo(my){
     const slot=new THREE.Vector3(targetX,-2.3,0);
     await tween(300/speed,p=>cSphere.position.lerpVectors(from,slot,p));
     if(my!==runToken)return;
-    if(chain.length>1)addCyl(chainGroup,chain[chain.length-2].position.clone(),slot,0.09,'#ced4da');
+   redrawChainBonds();
     await tween(380/speed,p=>{
       tr.position.x=targetX-1.05*p;
       tr.position.y=0.5+2.5*p;

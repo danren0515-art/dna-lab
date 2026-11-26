@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вирус бешенства в 3D</title>
+<style>
+:root{--bg:#0f172a;--panel:#1e293b;--accent:#38bdf8;--text:#f1f5f9;--sec:#94a3b8;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',Roboto,Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--panel);border-bottom:1px solid #334155;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:bold;color:var(--accent)}
+.back{padding:8px 16px;border:1px solid #444;border-radius:20px;color:var(--text);text-decoration:none;font-size:14px}
+.back:hover{background:var(--accent);color:#000}
+main{flex:1;max-width:1000px;margin:0 auto;width:100%;padding:16px;display:flex;flex-direction:column;align-items:center}
+h1{color:var(--accent);font-size:22px;text-align:center}
+#scene{width:100%;max-width:900px;height:480px;border:1px solid #334155;border-radius:12px;background:#050510;overflow:hidden;cursor:grab}
+#scene:active{cursor:grabbing}
+.controls{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap;justify-content:center}
+.ctrl{padding:11px 22px;border:1px solid rgba(56,189,248,.4);background:rgba(255,255,255,.05);color:var(--accent);cursor:pointer;border-radius:8px;font-size:14px;font-weight:bold}
+.ctrl:hover{background:var(--accent);color:#000}
+.legend{background:rgba(255,255,255,.05);border-left:4px solid var(--accent);padding:12px 16px;border-radius:8px;max-width:780px;color:var(--sec);font-size:13px;margin-top:10px;text-align:center}
+.legend b{color:var(--accent)}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin:0 3px;vertical-align:middle}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:20px;width:100%}
+.card{background:var(--panel);border:1px solid #334155;border-radius:10px;padding:16px}
+.card h3{color:var(--accent);margin:0 0 8px;font-size:16px}
+.card p{margin:0;color:var(--sec);font-size:13px;line-height:1.6}
+.card ul{margin:6px 0 0;padding-left:18px;color:var(--sec);font-size:13px;line-height:1.6}
+.card li{margin-bottom:4px}
+</style>
+</head>
+<body>
+<header>
+<span class="logo">🦠 Вирус бешенства</span>
+<a class="back" href="index.html">← К моделям</a>
+</header>
+<main>
+<h1>Вирус бешенства (Rabies virus, Lyssavirus) в 3D</h1>
+<div id="scene"></div>
+<div class="controls">
+<button class="ctrl" id="bSpin">⏸ Остановить вращение</button>
+<button class="ctrl" id="bRNP">🔍 Показать РНК</button>
+<button class="ctrl" id="bCross">✂ Разрез</button>
+</div>
+<div class="legend">
+<b>Обозначения:</b>
+<span class="dot" style="background:#4dd0e1"></span>G-белки (шипы) — связываются с рецепторами нервных клеток,
+<span class="dot" style="background:#ffb74d"></span>М-белки (матрикс) под оболочкой,
+<span class="dot" style="background:#8899bb"></span>липидная оболочка,
+<span class="dot" style="background:#ba68c8"></span>РНП: спираль РНК + N-белок,
+<span class="dot" style="background:#f06292"></span>L-полимераза — внутри.<br>
+Вращение — левой кнопкой мыши, зум — колёсиком.
+</div>
+
+<div class="cards">
+<div class="card">
+<h3>Что это за вирус</h3>
+<p>Возбудитель бешенства — РНК-вирус из семейства Rhabdoviridae («рабдовирус» — от «рабдос», «палка/пуля»). Его вирион имеет уникальную пулевидную форму: один конец округлый, другой плоский. Поражает нейроны, заражение идёт от места укуса по нервам к головному мозгу.</p>
+</div>
+<div class="card">
+<h3>Строение вириона</h3>
+<ul>
+<li><b>G-гликопротеин (шипы):</b> узнаёт рецепторы нервных клеток (ацетилхолиновый, NCAM), главная мишень антител и вакцин.</li>
+<li><b>M-белок (матрикс):</b> слой под оболочкой, придаёт пуле жёсткую форму.</li>
+<li><b>N-белок:</b> упаковывает геном в плотную спираль — рибонуклеопротеид (РНП).</li>
+<li><b>L-полимераза и P-белок:</b> комплекс внутри, копирует РНК и запускает синтез белков сразу после заражения.</li>
+<li><b>Геном:</b> одна минус-РНК (~12 тыс. нуклеотидов) — кодирует всего 5 белков.</li>
+</ul>
+</div>
+<div class="card">
+<h3>Жизненный цикл</h3>
+<ul>
+<li>1. G-белок связывается с рецептором нейрона, вирус сливается с мембраной.</li>
+<li>2. РНП выходит в цитоплазму; минус-РНК нельзя читать напрямую — L-полимераза делает на ней плюс-копии.</li>
+<li>3. С них синтезируются вирусные белки и копии генома.</li>
+<li>4. Новые вирионы собираются и отпочковываются от мембраны нейрона.</li>
+<li>5. Вирус передвигается к следующему нейрону через синапсы — со скоростью примерно 3 мм/час, пока не достигнет мозга.</li>
+</ul>
+</div>
+</div>
+</main>
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script>
+(function(){
+var container=document.getElementById('scene');
+if(typeof THREE==='undefined'){
+  container.innerHTML='<p style="color:#ff5252;padding:20px">Библиотека 3D не загрузилась — проверь интернет и обнови страницу (Ctrl+F5)</p>';
+  return;
+}
+var scene=new THREE.Scene();
+scene.background=new THREE.Color(0x050510);
+var camera=new THREE.PerspectiveCamera(45,1,0.1,200);
+var camDist=26;
+camera.position.set(0,6,camDist);camera.lookAt(0,0,0);
+var renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio||1);
+container.appendChild(renderer.domElement);
+function fit(){
+  var w=container.clientWidth,h=container.clientHeight;
+  camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);
+}
+fit();window.addEventListener('resize',fit);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
+var dl=new THREE.DirectionalLight(0xffffff,0.9);dl.position.set(20,30,40);scene.add(dl);
+var dl2=new THREE.DirectionalLight(0x88aaff,0.4);dl2.position.set(-30,-20,-30);scene.add(dl2);
+
+var virus=new THREE.Group();scene.add(virus);
+
+/* ---------- размеры "пули" ---------- */
+var R=5.5;      // радиус
+var H=7;        // длина цилиндрической части
+
+/* ---------- корпус: пулевидная оболочка ---------- */
+var envMat=new THREE.MeshPhongMaterial({color:0x8899bb,transparent:true,opacity:0.35,shininess:60});
+var cyl=new THREE.Mesh(new THREE.CylinderGeometry(R,R,H,48,1,true),envMat);
+cyl.position.y=-H/2;virus.add(cyl);
+var cap=new THREE.Mesh(new THREE.SphereGeometry(R,48,24,0,Math.PI*2,0,Math.PI/2),envMat);
+cap.position.y=0;virus.add(cap);
+var flat=new THREE.Mesh(new THREE.CircleGeometry(R,48),envMat);
+flat.rotation.x=-Math.PI/2;flat.position.y=-H;virus.add(flat);
+
+/* ---------- дно "пули" слегка выпуклое ---------- */
+var flatCap=new THREE.Mesh(new THREE.SphereGeometry(R,48,24,0,Math.PI*2,Math.PI/2,Math.PI/2),envMat);
+flatCap.scale.y=0.35;flatCap.position.y=-H;virus.add(flatCap);
+
+/* ---------- G-белки: булавовидные шипы ---------- */
+var gMat=new THREE.MeshPhongMaterial({color:0x4dd0e1,shininess:70});
+function surfacePoints(n){
+  var pts=[];
+  // цилиндрическая часть
+  for(var i=0;i<n*0.55;i++){
+    var ang=i*2.39996,y=-0.3-((i*2.7)%(H-0.6));
+    pts.push([Math.cos(ang)*R,y,Math.sin(ang)*R,Math.PI/2+0]);
+  }
+  // купол
+  for(var i=0;i<n*0.45;i++){
+    var u=i/(n*0.45),phi=u*Math.PI/2*0.9;
+    var rad=Math.cos(phi)*R,y=Math.sin(phi)*R;
+    var ang=i*2.39996;
+    pts.push([Math.cos(ang)*rad,y,Math.sin(ang)*rad,phi]);
+  }
+  return pts;
+}
+function addSpike(dir,yk,norm){
+  var stalk=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.22,1.7,8),gMat);
+  stalk.position.set(dir.x*1.0,yk+dir.y*0.85,dir.z*1.0);
+  var up=new THREE.Vector3(dir.x*norm,dir.y,dir.z*norm).normalize();
+  stalk.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),up);
+  virus.add(stalk);
+  var head=new THREE.Mesh(new THREE.SphereGeometry(0.5,12,12),gMat);
+  head.position.set(dir.x*1.0,yk+dir.y*1.6,dir.z*1.0);
+  virus.add(head);
+}
+surfacePoints(90).forEach(function(p){
+  addSpike(new THREE.Vector3(p[0],0,p[2]),p[1],1);
+});
+
+/* ---------- М-белки под оболочкой ---------- */
+var mMat=new THREE.MeshPhongMaterial({color:0xffb74d,shininess:40});
+for(var i=0;i<50;i++){
+  var ang=i*2.39996,y=-0.4-((i*3.1)%(H-0.8));
+  var b=new THREE.Mesh(new THREE.SphereGeometry(0.32,10,10),mMat);
+  b.position.set(Math.cos(ang)*R*0.93,y,Math.sin(ang)*R*0.93);
+  virus.add(b);
+}
+
+/* ---------- спиральный РНП внутри ---------- */
+var rnp=new THREE.Group();virus.add(rnp);
+var rnaMat=new THREE.MeshPhongMaterial({color:0xba68c8,shininess:80});
+var nucMat=new THREE.MeshPhongMaterial({color:0xa78bfa,shininess:80});
+var rnaPts=[];
+var turns=9,N=160;
+for(var i=0;i<N;i++){
+  var t=i/(N-1);
+  var ang=t*turns*Math.PI*2;
+  var y=-H+0.8+t*(H-1.6);
+  var rr=R*0.55;
+  var p=new THREE.Vector3(Math.cos(ang)*rr,y,Math.sin(ang)*rr);
+  rnaPts.push(p);
+  var s=new THREE.Mesh(new THREE.SphereGeometry(0.22,8,8),rnaMat);
+  s.position.copy(p);rnp.add(s);
+  if(i%6===3){
+    var n=new THREE.Mesh(new THREE.SphereGeometry(0.28,10,10),nucMat);
+    n.position.copy(p);rnp.add(n);
+  }
+}
+var linkGeo=new THREE.CylinderGeometry(0.08,0.08,1,6);
+var linkMat=new THREE.MeshPhongMaterial({color:0xba68c8});
+for(var i=0;i<rnaPts.length-1;i++){
+  var l=new THREE.Mesh(linkGeo,linkMat);
+  var p1=rnaPts[i],p2=rnaPts[i+1];
+  var d=new THREE.Vector3().subVectors(p2,p1);
+  l.position.copy(p1).addScaledVector(d,0.5);
+  l.scale.y=Math.max(d.length(),0.001);
+  d.normalize();
+  l.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d);
+  rnp.add(l);
+}
+
+/* ---------- L-полимераза ---------- */
+var pol=new THREE.Mesh(new THREE.SphereGeometry(0.9,20,20),
+  new THREE.MeshPhongMaterial({color:0xf06292,shininess:80}));
+pol.position.set(0,-H+1.4,0);rnp.add(pol);
+
+/* ---------- разрез ---------- */
+var cutPlane=new THREE.Mesh(new THREE.PlaneGeometry(2*R+4,H+4),
+  new THREE.MeshBasicMaterial({color:0x0b1020,transparent:true,opacity:0.94,side:THREE.DoubleSide}));
+cutPlane.rotation.y=Math.PI/2;
+cutPlane.visible=false;
+scene.add(cutPlane);
+
+/* ---------- управление ---------- */
+var autoRotate=true,dragging=false,lastX=0,lastY=0;
+container.addEventListener('mousedown',function(e){dragging=true;lastX=e.clientX;lastY=e.clientY;});
+window.addEventListener('mouseup',function(){dragging=false;});
+window.addEventListener('mousemove',function(e){
+  if(!dragging)return;
+  virus.rotation.y+=(e.clientX-lastX)*0.006;
+  virus.rotation.x+=(e.clientY-lastY)*0.004;
+  if(virus.rotation.x>1)virus.rotation.x=1;
+  if(virus.rotation.x<-1)virus.rotation.x=-1;
+  lastX=e.clientX;lastY=e.clientY;
+});
+container.addEventListener('wheel',function(e){
+  e.preventDefault();
+  camDist+=e.deltaY*0.03;
+  if(camDist<12)camDist=12;
+  if(camDist>70)camDist=70;
+},{passive:false});
+container.addEventListener('touchstart',function(e){
+  if(e.touches.length===1){dragging=true;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;}
+},{passive:true});
+container.addEventListener('touchmove',function(e){
+  if(dragging&&e.touches.length===1){
+    virus.rotation.y+=(e.touches[0].clientX-lastX)*0.008;
+    virus.rotation.x+=(e.touches[0].clientY-lastY)*0.005;
+    if(virus.rotation.x>1)virus.rotation.x=1;
+    if(virus.rotation.x<-1)virus.rotation.x=-1;
+    lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;
+  }
+},{passive:true});
+container.addEventListener('touchend',function(){dragging=false;});
+
+var bSpin=document.getElementById('bSpin');
+var bRNP=document.getElementById('bRNP');
+var bCross=document.getElementById('bCross');
+bSpin.onclick=function(){
+  autoRotate=!autoRotate;
+  bSpin.textContent=autoRotate?'⏸ Остановить вращение':'▶ Включить вращение';
+};
+bRNP.onclick=function(){
+  rnp.visible=!rnp.visible;
+  bRNP.textContent=rnp.visible?'🔍 Показать РНК':'🔍 Скрыть РНК';
+};
+bCross.onclick=function(){
+  cutPlane.visible=!cutPlane.visible;
+  envMat.opacity=cutPlane.visible?0.5:0.35;
+  bCross.textContent=cutPlane.visible?'✂ Убрать разрез':'✂ Разрез';
+};
+
+function loop(){
+  requestAnimationFrame(loop);
+  if(autoRotate)virus.rotation.y+=0.005;
+  camera.position.set(0,6,camDist);
+  camera.lookAt(0,-H/2,0);
+  renderer.render(scene,camera);
+}
+loop();
+})();
+</script>
+</body>
+</html>

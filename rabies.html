@@ -110,7 +110,8 @@ var virus=new THREE.Group();scene.add(virus);
 var R=5.5;
 var H=7;
 
-var envMat=new THREE.MeshPhongMaterial({color:0x8899bb,transparent:true,opacity:0.35,shininess:60});
+/* ---------- корпус: пулевидная оболочка ---------- */
+var envMat=new THREE.MeshPhongMaterial({color:0x8899bb,transparent:true,opacity:0.3,shininess:60,depthWrite:false});
 var cyl=new THREE.Mesh(new THREE.CylinderGeometry(R,R,H,48,1,true),envMat);
 cyl.position.y=-H/2;virus.add(cyl);
 var cap=new THREE.Mesh(new THREE.SphereGeometry(R,48,24,0,Math.PI*2,0,Math.PI/2),envMat);
@@ -118,43 +119,56 @@ cap.position.y=0;virus.add(cap);
 var flatCap=new THREE.Mesh(new THREE.SphereGeometry(R,48,24,0,Math.PI*2,Math.PI/2,Math.PI/2),envMat);
 flatCap.scale.y=0.35;flatCap.position.y=-H;virus.add(flatCap);
 
-var gMat=new THREE.MeshPhongMaterial({color:0x4dd0e1,shininess:70});
-function surfacePoints(n){
-  var pts=[];
-  for(var i=0;i<n*0.55;i++){
-    var ang=i*2.39996,y=-0.3-((i*2.7)%(H-0.6));
-    pts.push([Math.cos(ang)*R,y,Math.sin(ang)*R]);
+/* ---------- точки на поверхности: позиция + нормаль ---------- */
+function surfacePoints(){
+  var pts=[],ang;
+  var cylN=55;
+  for(var i=0;i<cylN;i++){
+    ang=i*2.39996;
+    var y=-0.4-(i/(cylN-1))*(H-0.9);
+    var c=Math.cos(ang),s=Math.sin(ang);
+    pts.push({x:c*R,y:y,z:s*R,nx:c,ny:0,nz:s});
   }
-  for(var i=0;i<n*0.45;i++){
-    var u=i/(n*0.45),phi=u*Math.PI/2*0.9;
-    var rad=Math.cos(phi)*R,y=Math.sin(phi)*R;
-    var ang=i*2.39996;
-    pts.push([Math.cos(ang)*rad,y,Math.sin(ang)*rad]);
+  var capN=40;
+  for(var i=0;i<capN;i++){
+    /* фи — угол от экватора к макушке, распределение по золотому углу */
+    var t=(i+0.5)/capN;
+    var phi=Math.asin(t);           /* равномерно по площади купола */
+    var cph=Math.cos(phi),sph=Math.sin(phi);
+    ang=i*2.39996;
+    var c=Math.cos(ang),s=Math.sin(ang);
+    var x=cph*c*R,y=sph*R,z=cph*s*R;
+    var len=Math.sqrt(x*x+y*y+z*z);
+    pts.push({x:x,y:y,z:z,nx:x/len,ny:y/len,nz:z/len});
   }
   return pts;
 }
-function addSpike(dir,yk){
+
+/* ---------- G-белки: ствол и головка строго вдоль нормали ---------- */
+var gMat=new THREE.MeshPhongMaterial({color:0x4dd0e1,shininess:70});
+surfacePoints().forEach(function(p){
+  var n=new THREE.Vector3(p.nx,p.ny,p.nz);
+  var base=new THREE.Vector3(p.x,p.y,p.z);
   var stalk=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.22,1.7,8),gMat);
-  stalk.position.set(dir.x,yk+0.85,dir.z);
-  var up=new THREE.Vector3(dir.x,0.6,dir.z).normalize();
-  stalk.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),up);
+  var mid=base.clone().addScaledVector(n,0.85);
+  stalk.position.copy(mid);
+  stalk.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),n);
   virus.add(stalk);
   var head=new THREE.Mesh(new THREE.SphereGeometry(0.5,12,12),gMat);
-  head.position.set(dir.x*1.05,yk+1.6,dir.z*1.05);
+  head.position.copy(base.clone().addScaledVector(n,1.8));
   virus.add(head);
-}
-surfacePoints(90).forEach(function(p){
-  addSpike(new THREE.Vector3(p[0],0,p[2]),p[1]);
 });
 
+/* ---------- М-белки под оболочкой ---------- */
 var mMat=new THREE.MeshPhongMaterial({color:0xffb74d,shininess:40});
 for(var i=0;i<50;i++){
   var ang=i*2.39996,y=-0.4-((i*3.1)%(H-0.8));
   var b=new THREE.Mesh(new THREE.SphereGeometry(0.32,10,10),mMat);
-  b.position.set(Math.cos(ang)*R*0.93,y,Math.sin(ang)*R*0.93);
+  b.position.set(Math.cos(ang)*R*0.92,y,Math.sin(ang)*R*0.92);
   virus.add(b);
 }
 
+/* ---------- спиральный РНП внутри ---------- */
 var rnp=new THREE.Group();virus.add(rnp);
 var rnaMat=new THREE.MeshPhongMaterial({color:0xba68c8,shininess:80});
 var nucMat=new THREE.MeshPhongMaterial({color:0xa78bfa,shininess:80});
@@ -187,10 +201,12 @@ for(var i=0;i<rnaPts.length-1;i++){
   rnp.add(l);
 }
 
+/* ---------- L-полимераза ---------- */
 var pol=new THREE.Mesh(new THREE.SphereGeometry(0.9,20,20),
   new THREE.MeshPhongMaterial({color:0xf06292,shininess:80}));
 pol.position.set(0,-H+1.4,0);rnp.add(pol);
 
+/* ---------- управление ---------- */
 var autoRotate=true,dragging=false,lastX=0,lastY=0;
 container.addEventListener('mousedown',function(e){dragging=true;lastX=e.clientX;lastY=e.clientY;});
 window.addEventListener('mouseup',function(){dragging=false;});
